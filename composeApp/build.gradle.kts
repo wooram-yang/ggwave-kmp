@@ -37,6 +37,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.kotlinx.coroutines.android)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -46,18 +47,15 @@ kotlin {
             @OptIn(ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
 
-            api("io.insert-koin:koin-core:3.5.3")
-            api("io.insert-koin:koin-compose:1.1.2")
-
-            api("moe.tlaster:precompose:1.5.11")
-            api("moe.tlaster:precompose-viewmodel:1.5.11")
-            api("moe.tlaster:precompose-koin:1.5.11")
+            implementation(libs.lifecycle.viewmodel.compose)
+            implementation(libs.constraintlayout.compose.multiplatform)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(libs.kotlinx.coroutines.swing)
         }
     }
 }
