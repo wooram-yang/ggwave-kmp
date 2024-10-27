@@ -122,13 +122,13 @@ object JVMCoreManager: BaseCoreManager {
     override fun onNativeReceivedMessage(data: ByteArray) {
         val resultString = String(data)
 
-        print("onNativeReceivedMessage: $resultString")
+        print("onNativeReceivedMessage: $resultString\n")
 
         captureSoundListener.onReceivedMessage(resultString)
     }
 
     override fun onNativeMessageEncoded(data: ShortArray) {
-        print("onNativeMessageEncoded: $data")
+        print("onNativeMessageEncoded: $data\n")
 
         encodedDataArray = data
         play()
