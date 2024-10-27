@@ -2,10 +2,8 @@
 
 Kotlin Multiplatform Project using [ggwave](https://github.com/ggerganov/ggwave)
 
-<img src="https://github.com/user-attachments/assets/6ff0273b-eda5-4681-a1a6-7b3bad84b5ed" width=600 />
+<img src="https://github.com/user-attachments/assets/75ac400c-1955-4ddc-b251-b819223174d1" width=600 />
 <br/><br/>
-<img src="https://github.com/user-attachments/assets/54bf1a65-a66f-4f97-a323-98a2a7fd0529" width=300 />
+<img src="https://github.com/user-attachments/assets/aca36caf-8cc3-44fc-90ac-3a4a08b9b025" width=300 />
 <br/><br/>
-
-https://github.com/user-attachments/assets/e85ca859-c6d6-4eda-9e30-bec9697998e9
 
