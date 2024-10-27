@@ -91,6 +91,7 @@ object AndroidCoreManager: BaseCoreManager {
                 audioTrack.setPlaybackPositionUpdateListener(
                     object: OnPlaybackPositionUpdateListener {
                         override fun onMarkerReached(track: AudioTrack?) {
+                            track?.stop()
                             playSoundListener.onPlayEnded()
                         }
 
