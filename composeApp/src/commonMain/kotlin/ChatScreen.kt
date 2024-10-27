@@ -112,7 +112,7 @@ fun ChatItem(message: ChatDataModel.TestMessage) {
                 .background(MaterialTheme.colors.primary)
                 .padding(16.dp)
         ) {
-            Text(text = message.text)
+            Text(text = message.text, color = Color.White)
         }
     }
 }
@@ -152,12 +152,14 @@ fun ChatBottom(
         IconButton(
             onClick = onReceiveClickListener,
             modifier = Modifier
+                .padding(5.dp)
                 .clip(CircleShape)
                 .background(color = MaterialTheme.colors.primary)
                 .align(Alignment.CenterVertically)
         ) {
             Icon(
                 imageVector = imageVectorForIconButton,
+                tint = Color.White,
                 contentDescription = "Receive",
             )
         }
@@ -173,12 +175,14 @@ fun ChatBottom(
                 chatBoxString = TextFieldValue("")
             },
             modifier = Modifier
+                .padding(5.dp)
                 .clip(CircleShape)
                 .background(color = MaterialTheme.colors.primary)
                 .align(Alignment.CenterVertically)
         ) {
             Icon(
                 imageVector = Icons.Default.Send,
+                tint = Color.White,
                 contentDescription = "Send",
             )
         }
