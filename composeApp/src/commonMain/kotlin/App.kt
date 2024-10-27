@@ -1,66 +1,44 @@
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import moe.tlaster.precompose.PreComposeApp
 
-val viewModel = AppViewModel()
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+
 
 @Composable
-fun App() {
-    PreComposeApp {
-        MaterialTheme {
-            var playSoundToggle by remember { mutableStateOf(false) }
-            var recordToggle by remember { mutableStateOf(false) }
+fun App(
+    viewModel: AppViewModel = viewModel { AppViewModel() }
+) {
+    val isSendingProcessing by viewModel.isSendingProcessing.collectAsState()
+    val isCaptureProcessing by viewModel.isCaptureProcessing.collectAsState()
 
-            Column(
-                Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Text(viewModel.firstStatus)
-                Text(viewModel.messageWillBeSent)
-                Button(onClick = {
-                    playSoundToggle = !playSoundToggle
+    val messages by viewModel.messages.collectAsState()
 
-                    togglePlaySound(playSoundToggle)
-                }) {
-                    Text(viewModel.firstButtonString)
+    MaterialTheme {
+        ChatScreen(
+            isSendingProcessing = isSendingProcessing,
+            isCaptureProcessing = isCaptureProcessing,
+            dataModel = ChatDataModel(messages = messages),
+            onSendClickListener = { message ->
+                if (isCaptureProcessing) {
+                    viewModel.stopCaptureSound()
                 }
-                Text(viewModel.secondStatus)
-                Button(onClick = {
-                    recordToggle = !recordToggle
 
-                    toggleRecordSound(recordToggle)
-                }) {
-                    Text(viewModel.secondButtonString)
+                if (message.isNotEmpty() && isSendingProcessing.not()) {
+                    viewModel.sendMessage(message)
                 }
-            }
-        }
-    }
-}
-
-fun togglePlaySound(playSoundToggle: Boolean) {
-    if (playSoundToggle) {
-        viewModel.startPlaySound()
-    } else {
-        viewModel.stopPlaySound()
-    }
-}
-
-fun toggleRecordSound(recordToggle: Boolean) {
-    if (recordToggle) {
-        viewModel.startCaptureSound()
-    } else {
-        viewModel.stopCaptureSound()
+            },
+            onReceiveClickListener = {
+                if (isCaptureProcessing) {
+                    viewModel.stopCaptureSound()
+                } else {
+                    viewModel.startCaptureSound()
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
