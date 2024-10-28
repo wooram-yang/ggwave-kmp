@@ -1,5 +1,5 @@
-package = com.example.ggwave_multiplatform.ggwave
-
 headers = ggwave.h
 staticLibraries = libggwave.a
 libraryPaths = native/ggwave/
+
+linkerOpts.osx = -L/opt/homebrew/opt/llvm/lib/c++

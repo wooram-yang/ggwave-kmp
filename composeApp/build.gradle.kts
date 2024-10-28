@@ -25,6 +25,18 @@ kotlin {
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
+        iosTarget.compilations {
+            val main by getting {
+                cinterops {
+                    val nativeLibrary by creating {
+                        defFile(project.file("src/nativeInterop/cinterop/ggwave.def"))
+                        compilerOpts("-Inative/ggwave/")
+
+                    }
+                }
+            }
+        }
+
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
@@ -125,25 +137,25 @@ tasks.register("compileCPP") {
     val buildPath = "${projectDir}/cmake/$arch/$os"
 
     if (OperatingSystem.current().isWindows) {
-//        exec {
-//            setWorkingDir("${projectDir}/src/desktopMain")
-//            commandLine(
-//                "cmake",
-//                "-G \"Ninja\"",
-//                "-DCMAKE_BUILD_TYPE=Release",
-//                "-DCMAKE_C_COMPILER=gcc",
-//                "-DCMAKE_CXX_COMPILER=g++",
-//                "-DCMAKE_C_COMPILER_TARGET=x86_64-window-gnu",
-//                "-DCMAKE_CXX_COMPILER_TARGET=x86_64-window-gnu",
-//                "-B",
-//                buildPath,
-//                "-S",
-//                "."
-//            )
-//
-//            setWorkingDir(buildPath)
-//            commandLine("cmake", "--build", ".")
-//        }
+        exec {
+            setWorkingDir("${projectDir}/src/desktopMain")
+            commandLine(
+                "cmake",
+                "-G \"Ninja\"",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_C_COMPILER=gcc",
+                "-DCMAKE_CXX_COMPILER=g++",
+                "-DCMAKE_C_COMPILER_TARGET=x86_64-window-gnu",
+                "-DCMAKE_CXX_COMPILER_TARGET=x86_64-window-gnu",
+                "-B",
+                buildPath,
+                "-S",
+                "."
+            )
+
+            setWorkingDir(buildPath)
+            commandLine("cmake", "--build", ".")
+        }
     } else if (OperatingSystem.current().isMacOsX) {
         val nativePath = "${projectDir}/native/ggwave"
         exec {
@@ -153,10 +165,25 @@ tasks.register("compileCPP") {
                 "iphonesimulator",
                 "clang++",
                 "-std=c++11",
+                "-stdlib=libc++",
+                "-c",
+                "${nativePath}/resampler.cpp",
+                "-o",
+                "${nativePath}/resampler.o"
+            )
+        }
+        exec {
+            commandLine(
+                "xcrun",
+                "--sdk",
+                "iphonesimulator",
+                "clang++",
+                "-std=c++11",
+                "-stdlib=libc++",
                 "-c",
                 "${nativePath}/ggwave.cpp",
                 "-o",
-                "${buildPath}/ggwave.o"
+                "${nativePath}/ggwave.o"
             )
         }
         exec {
@@ -164,8 +191,9 @@ tasks.register("compileCPP") {
                 "libtool",
                 "-static",
                 "-o",
-                "${buildPath}/libggwave.a",
-                "${buildPath}/ggwave.o"
+                "${nativePath}/libggwave.a",
+                "${nativePath}/ggwave.o",
+                "${nativePath}/resampler.o"
             )
         }
     }
