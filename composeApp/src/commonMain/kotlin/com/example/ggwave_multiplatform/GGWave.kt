@@ -4,7 +4,8 @@ interface GGWave {
     var delegate: BaseCoreManager?
 
     fun initNative()
-    fun processCaptureData(data: ShortArray)
+    fun processCaptureData(shortData: ShortArray)
+    fun processCaptureData(byteData: ByteArray)
     fun sendMessage(message: String)
 
     fun onNativeReceivedMessage(data: ByteArray)

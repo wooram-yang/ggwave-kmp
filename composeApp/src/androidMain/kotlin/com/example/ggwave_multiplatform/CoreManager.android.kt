@@ -68,7 +68,7 @@ object AndroidCoreManager: BaseCoreManager {
 
                 val offsetRecording = audioRecord.read(decodedDataArray, 0, decodedDataArray.size)
                 totalRead += offsetRecording
-                ggWave.processCaptureData(decodedDataArray)
+                ggWave.processCaptureData(shortData = decodedDataArray)
             }
 
             audioRecord.stop()

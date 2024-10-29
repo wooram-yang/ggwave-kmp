@@ -72,7 +72,7 @@ object JVMCoreManager: BaseCoreManager {
                 val shortArray = ShortArray(buffer.size / 2)
                 ByteBuffer.wrap(buffer).order(ByteOrder.BIG_ENDIAN).asShortBuffer()[shortArray]
 
-                ggWave.processCaptureData(shortArray)
+                ggWave.processCaptureData(shortData = shortArray)
             }
             recordObject.close()
 

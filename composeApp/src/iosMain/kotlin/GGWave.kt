@@ -3,6 +3,7 @@ package com.example.ggwave_multiplatform
 import ggwave.ggwave_Instance
 import ggwave.ggwave_SampleFormat
 import ggwave.ggwave_TxProtocolId
+import ggwave.ggwave_decode
 import ggwave.ggwave_encode
 import ggwave.ggwave_getDefaultParameters
 import ggwave.ggwave_init
@@ -18,13 +19,27 @@ object IOSGGWave: GGWave {
         ggwaveParams = ggwaveParams.copy {
             sampleFormatInp = ggwave_SampleFormat.GGWAVE_SAMPLE_FORMAT_I16
             sampleFormatOut = ggwave_SampleFormat.GGWAVE_SAMPLE_FORMAT_I16
-            sampleRateInp = 48000f
+            sampleRateInp = 44100f
         }
 
         this.ggwaveInstance = ggwave_init(ggwaveParams)
     }
 
-    override fun processCaptureData(data: ShortArray) {}
+    override fun processCaptureData(shortData: ShortArray) {}
+
+    override fun processCaptureData(byteData: ByteArray) {
+        val output = ByteArray(256)
+        val decodeCount = ggwave_decode(
+            this.ggwaveInstance,
+            byteData.refTo(0),
+            byteData.size,
+            output.refTo(0)
+        )
+
+        if (decodeCount > 0) {
+            this.onNativeReceivedMessage(output)
+        }
+    }
 
     @OptIn(ExperimentalForeignApi::class)
     override fun sendMessage(message: String) {
