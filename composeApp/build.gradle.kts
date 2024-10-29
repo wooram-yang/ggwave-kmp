@@ -129,11 +129,24 @@ compose.desktop {
     }
 }
 
+tasks.register("createDirectoryIfNotExists") {
+    val arch = System.getProperty("os.arch")
+    val os = System.getProperty("os.name").split(' ')[0]
+    val dirPath = "${projectDir}/cmake/$arch/$os"
+    val dir = file(dirPath)
+    if (dir.exists().not()) {
+        dir.mkdirs()
+        println("Directory created: $dir")
+    }
+}
+
 tasks.register("compileCPP") {
+    dependsOn("createDirectoryIfNotExists")
+
     val libName = System.mapLibraryName("libggwave")
     outputs.file("$projectDir/libs/jni/$libName")
     val arch = System.getProperty("os.arch")
-    val os = System.getProperty("os.name")
+    val os = System.getProperty("os.name").split(' ')[0]
     val buildPath = "${projectDir}/cmake/$arch/$os"
 
     if (OperatingSystem.current().isWindows) {
@@ -141,7 +154,8 @@ tasks.register("compileCPP") {
             setWorkingDir("${projectDir}/src/desktopMain")
             commandLine(
                 "cmake",
-                "-G \"Ninja\"",
+                "-G",
+                "Ninja",
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DCMAKE_C_COMPILER=gcc",
                 "-DCMAKE_CXX_COMPILER=g++",
@@ -152,7 +166,8 @@ tasks.register("compileCPP") {
                 "-S",
                 "."
             )
-
+        }
+        exec {
             setWorkingDir(buildPath)
             commandLine("cmake", "--build", ".")
         }
