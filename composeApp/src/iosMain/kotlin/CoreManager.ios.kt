@@ -9,17 +9,69 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import platform.AVFAudio.AVAudioPlayer
 import platform.AVFAudio.AVAudioPlayerDelegateProtocol
+import platform.AudioToolbox.AudioQueueAllocateBuffer
+import platform.AudioToolbox.AudioQueueBufferRef
+import platform.AudioToolbox.AudioQueueBufferRefVar
+import platform.AudioToolbox.AudioQueueDispose
+import platform.AudioToolbox.AudioQueueEnqueueBuffer
+import platform.AudioToolbox.AudioQueueNewInput
+import platform.AudioToolbox.AudioQueueRef
+import platform.AudioToolbox.AudioQueueRefVar
+import platform.AudioToolbox.AudioQueueStart
+import platform.AudioToolbox.AudioQueueStop
+import platform.CoreAudioTypes.AudioStreamBasicDescription
+import platform.CoreAudioTypes.AudioStreamPacketDescription
+import platform.CoreAudioTypes.AudioTimeStamp
+import platform.CoreAudioTypes.kAudioFormatLinearPCM
+import platform.CoreAudioTypes.kLinearPCMFormatFlagIsSignedInteger
+import platform.CoreFoundation.CFRunLoopGetCurrent
+import platform.CoreFoundation.CFRunLoopRun
+import platform.CoreFoundation.kCFRunLoopCommonModes
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSMutableData
 import platform.Foundation.appendData
 import platform.Foundation.create
 import platform.darwin.NSObject
+import platform.darwin.OSStatus
+import platform.darwin.UInt32
 import kotlin.experimental.and
 
+var willStopRecording = false
+var outsiderGGWave: GGWave? = null
+fun processCaptureData(byteData: ByteArray) {
+    outsiderGGWave?.processCaptureData(byteData = byteData)
+}
+
+@OptIn(ExperimentalForeignApi::class)
+fun audioQueueInputCallback(
+    inUserData: COpaquePointer?,
+    inAQ: AudioQueueRef?,
+    inBuffer: AudioQueueBufferRef?,
+    inStartTime: CPointer<AudioTimeStamp>?,
+    inNumberPacketDescriptions: UInt32,
+    inPacketDescs: CPointer<AudioStreamPacketDescription>?
+) {
+    if(willStopRecording) {
+        return
+    }
+
+    inBuffer?.let {
+        val audioData = inBuffer.pointed.mAudioData!!.reinterpret<ByteVar>()
+        val audioDataSize = inBuffer.pointed.mAudioDataByteSize.toInt()
+        val audioBytes = audioData.readBytes(audioDataSize)
+
+        processCaptureData(byteData = audioBytes)
+    }
+
+    AudioQueueEnqueueBuffer(inAQ, inBuffer, 0u, null)
+}
 
 object IOSCoreManager: BaseCoreManager {
-    private const val SAMPLE_RATE = 48000
+    private const val INPUT_SAMPLE_RATE = 44100.0
+    private const val OUTPUT_SAMPLE_RATE = 48000.0
+    private const val BUFFER_SIZE = 16 * 1024
+    private const val BUFFER_NUM = 3
 
     override var ggWave: GGWave = GGWaveFactory.createInstance()
     override lateinit var playSoundListener: PlaySoundListener
@@ -32,33 +84,70 @@ object IOSCoreManager: BaseCoreManager {
     private var encodedDataArray: ShortArray? = null
     private var audioPlayer: AVAudioPlayer? = null
 
-    private var willStopRecording = false
-
+    @OptIn(ExperimentalForeignApi::class)
+    private var audioQueueRef: AudioQueueRefVar? = null
 
     init {
         ggWave.delegate = this
         ggWave.initNative()
 
-        initAudioRecord()
+        outsiderGGWave = ggWave
     }
 
     override fun startCapturing() {
         capture()
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     override fun stopCapturing() {
         willStopRecording = true
+
+        AudioQueueStop(audioQueueRef?.value, true)
+        AudioQueueDispose(audioQueueRef?.value, true)
+        audioQueueRef = null
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     override fun capture() {
         scope.launch {
-            while (true) {
-                if(willStopRecording) {
-                    break
+            memScoped {
+                willStopRecording = false
+
+                val audioFormat = alloc<AudioStreamBasicDescription>().apply {
+                    mSampleRate = INPUT_SAMPLE_RATE
+                    mFormatID = kAudioFormatLinearPCM
+                    mFramesPerPacket = 1u
+                    mChannelsPerFrame = 1u
+                    mBytesPerFrame = 2u
+                    mBytesPerPacket = 2u
+                    mBitsPerChannel = 16u
+                    mReserved = 0u
+                    mFormatFlags = kLinearPCMFormatFlagIsSignedInteger
+                }
+                audioQueueRef = alloc<AudioQueueRefVar>()
+
+                val callback = staticCFunction(::audioQueueInputCallback)
+                val status: OSStatus = AudioQueueNewInput(
+                    audioFormat.ptr,
+                    callback,
+                    null,
+                    CFRunLoopGetCurrent(),
+                    kCFRunLoopCommonModes,
+                    0u,
+                    audioQueueRef?.ptr
+                )
+
+                if (status == 0) {
+                    for (i in 0 until BUFFER_NUM) {
+                        val bufferRefVar: AudioQueueBufferRefVar = alloc<AudioQueueBufferRefVar>()
+                        AudioQueueAllocateBuffer(audioQueueRef?.value, BUFFER_SIZE.toUInt(), bufferRefVar.ptr)
+                        AudioQueueEnqueueBuffer(audioQueueRef?.value, bufferRefVar.value, 0u, null)
+                    }
+
+                    AudioQueueStart(audioQueueRef?.value, null)
+                    CFRunLoopRun()
                 }
             }
-
-            willStopRecording = false
         }
     }
 
@@ -94,19 +183,16 @@ object IOSCoreManager: BaseCoreManager {
         }
     }
 
-    override fun playing() {
-    }
+    override fun playing() {}
 
+    @OptIn(ExperimentalForeignApi::class)
     override fun onNativeReceivedMessage(data: ByteArray) {
-        captureSoundListener.onReceivedMessage(data.toString())
+        captureSoundListener.onReceivedMessage(data.toKString())
     }
 
     override fun onNativeMessageEncoded(data: ShortArray) {
         encodedDataArray = data
         play()
-    }
-
-    private fun initAudioRecord() {
     }
 
     private fun convertFromShortToByteArray(dataArray: ShortArray): ByteArray {
@@ -123,7 +209,7 @@ object IOSCoreManager: BaseCoreManager {
     private fun getWaveHeaderData(totalDataLength: Int): ByteArray {
         val totalAudioLen: ULong = totalDataLength.toULong()
         val totalDataLen: ULong = totalAudioLen + 44u
-        val longSampleRate: ULong = SAMPLE_RATE.toULong()
+        val longSampleRate: ULong = OUTPUT_SAMPLE_RATE.toULong()
         val channels: ULong = 1u
         val byteRate: ULong = (16u * longSampleRate * channels) / 8u
 
