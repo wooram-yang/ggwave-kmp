@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,29 +51,35 @@ fun ChatScreen(
     modifier: Modifier
 ) {
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("ggwaveKMP", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        },
         content = {
             ConstraintLayout(
                 modifier = modifier
             ) {
-                val (firstItem, secondItem) = createRefs()
+                val (topBar, firstItem, secondItem) = createRefs()
 
                 val listState = rememberLazyListState()
                 LaunchedEffect(dataModel.messages.size) {
                     listState.animateScrollToItem(dataModel.messages.size)
                 }
 
+                TopAppBar(
+                    modifier = Modifier.constrainAs(topBar) {
+                        top.linkTo(parent.top)
+                    },
+                    title = {
+                        Text(
+                            text = "ggwaveKMP",
+                            color = Color.White
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                )
                 LazyColumn(
                     modifier = Modifier
                         .constrainAs(firstItem) {
-                            top.linkTo(parent.top)
+                            top.linkTo(topBar.bottom)
                             bottom.linkTo(secondItem.top)
                             height = Dimension.fillToConstraints
                         }

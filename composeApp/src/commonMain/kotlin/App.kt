@@ -20,7 +20,7 @@ fun App(
     val messages by viewModel.messages.collectAsState()
 
     MyTheme(
-        seedColor = Color.Magenta
+        seedColor = Color.Cyan
     ) {
         ChatScreen(
             isSendingProcessing = isSendingProcessing,
