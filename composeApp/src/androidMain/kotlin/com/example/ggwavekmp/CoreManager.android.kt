@@ -29,7 +29,7 @@ object AndroidCoreManager: BaseCoreManager {
         initAudioRecord()
     }
 
-    private val scope = CoroutineScope(Job() + Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Default)
 
     private const val sampleHz = 48000
     private var encodedDataArray: ShortArray? = null

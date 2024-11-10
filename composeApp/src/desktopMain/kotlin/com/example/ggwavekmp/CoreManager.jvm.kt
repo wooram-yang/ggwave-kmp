@@ -26,7 +26,7 @@ object JVMCoreManager: BaseCoreManager {
         ggWave.initNative()
     }
 
-    private val scope = CoroutineScope(Job() + Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Default)
 
     private const val sampleHz = 48000f
     private var encodedDataArray: ShortArray? = null

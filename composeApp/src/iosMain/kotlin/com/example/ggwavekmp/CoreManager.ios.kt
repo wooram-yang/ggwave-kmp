@@ -80,7 +80,7 @@ object IOSCoreManager: BaseCoreManager {
 
     override var messageWillBeSent: String = ""
 
-    private val scope = CoroutineScope(Job() + Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Default)
 
     private var encodedDataArray: ShortArray? = null
     private var audioPlayer: AVAudioPlayer? = null
