@@ -1,6 +1,3 @@
-package com.example.ggwavekmp
-
-import App
 import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
