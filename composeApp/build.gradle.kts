@@ -55,13 +55,15 @@ kotlin {
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
-            implementation(compose.material)
+
+            implementation(compose.material3)
             implementation(compose.ui)
             @OptIn(ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
 
             implementation(libs.lifecycle.viewmodel.compose)
             implementation(libs.constraintlayout.compose.multiplatform)
+            implementation(libs.material.kolor)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
