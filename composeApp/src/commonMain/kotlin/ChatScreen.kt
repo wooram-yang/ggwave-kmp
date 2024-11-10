@@ -10,19 +10,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     isSendingProcessing: Boolean,
@@ -49,7 +53,12 @@ fun ChatScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("ggwaveKMP") })
+            TopAppBar(
+                title = { Text("ggwaveKMP", color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            )
         },
         content = {
             ConstraintLayout(
@@ -110,7 +119,7 @@ fun ChatItem(message: ChatDataModel.TestMessage) {
                         bottomEnd = if (message.isMine) 0f else 48f
                     )
                 )
-                .background(MaterialTheme.colors.primary)
+                .background(color = MaterialTheme.colorScheme.primary)
                 .padding(16.dp)
         ) {
             Text(text = message.text, color = Color.White)
@@ -146,7 +155,7 @@ fun ChatBottom(
                 .weight(1f)
                 .padding(4.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.textFieldColors(
+            colors = TextFieldDefaults.colors(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
@@ -160,7 +169,7 @@ fun ChatBottom(
             modifier = Modifier
                 .padding(5.dp)
                 .clip(CircleShape)
-                .background(color = MaterialTheme.colors.primary)
+                .background(color = MaterialTheme.colorScheme.primary)
                 .align(Alignment.CenterVertically)
         ) {
             Icon(
@@ -183,7 +192,7 @@ fun ChatBottom(
             modifier = Modifier
                 .padding(5.dp)
                 .clip(CircleShape)
-                .background(color = MaterialTheme.colors.primary)
+                .background(color = MaterialTheme.colorScheme.primary)
                 .align(Alignment.CenterVertically)
         ) {
             Icon(

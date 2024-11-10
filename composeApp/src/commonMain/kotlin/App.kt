@@ -1,11 +1,13 @@
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.materialkolor.rememberDynamicColorScheme
 
 
 @Composable
@@ -17,7 +19,9 @@ fun App(
 
     val messages by viewModel.messages.collectAsState()
 
-    MaterialTheme {
+    MyTheme(
+        seedColor = Color.Magenta
+    ) {
         ChatScreen(
             isSendingProcessing = isSendingProcessing,
             isCaptureProcessing = isCaptureProcessing,
@@ -41,4 +45,18 @@ fun App(
             modifier = Modifier.fillMaxSize()
         )
     }
+}
+
+@Composable
+fun MyTheme(
+    seedColor: Color,
+    useDarkTheme: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val colorScheme = rememberDynamicColorScheme(seedColor, useDarkTheme, false)
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        content = content
+    )
 }
