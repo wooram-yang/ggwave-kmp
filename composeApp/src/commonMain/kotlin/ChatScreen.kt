@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
@@ -149,7 +150,7 @@ fun ChatBottom(
     val imageVectorForSendButton =  if (isSendingProcessing) {
         Icons.Default.Close
     } else {
-        Icons.Default.Send
+        Icons.AutoMirrored.Default.Send
     }
 
     Row(modifier = modifier.padding(16.dp)) {
