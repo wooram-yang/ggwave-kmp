@@ -1,4 +1,4 @@
-package com.example.ggwave_multiplatform
+package com.example.ggwavekmp
 
 actual object GGWaveFactory {
     init {

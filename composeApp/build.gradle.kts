@@ -74,7 +74,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.ggwave_multiplatform"
+    namespace = "com.example.ggwavekmp"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
@@ -82,7 +82,7 @@ android {
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 
     defaultConfig {
-        applicationId = "com.example.ggwave_multiplatform"
+        applicationId = "com.example.ggwavekmp"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -90,7 +90,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // target platforms
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
     }
     packaging {
@@ -124,7 +124,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.example.ggwave_multiplatform"
+            packageName = "com.example.ggwavekmp"
             packageVersion = "1.0.0"
         }
     }

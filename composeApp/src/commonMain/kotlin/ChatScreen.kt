@@ -48,7 +48,7 @@ fun ChatScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("ggwave_kmm") })
+            TopAppBar(title = { Text("ggwaveKMP") })
         },
         content = {
             ConstraintLayout(
