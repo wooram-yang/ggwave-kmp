@@ -122,9 +122,20 @@ compose.desktop {
         jvmArgs("-Djava.library.path=libs/jni")
 
         nativeDistributions {
+            outputBaseDir.set(project.buildDir.resolve("testDistribution"))
+            copy {
+                from("$projectDir/libs/jni/libggwave.dll")
+                into("${project.buildDir}/testDistribution/main/app/ggwaveKMP/libs/jni")
+            }
+
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.example.ggwavekmp"
+            packageName = "ggwaveKMP"
             packageVersion = "1.0.0"
+            description = "Compose Example App"
+            copyright = "© 2024 Wooram Yang. All rights reserved."
+            vendor = "Wooram Yang"
+            modules("java.base")
+            modules("java.desktop")
         }
     }
 }
