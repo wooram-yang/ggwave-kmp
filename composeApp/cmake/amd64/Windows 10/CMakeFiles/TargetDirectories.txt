@@ -1,3 +1,0 @@
-D:/My Develop/01. Private/Workspace/ggwave-multiplatform/composeApp/cmake/amd64/Windows 10/CMakeFiles/ggwave.dir
-D:/My Develop/01. Private/Workspace/ggwave-multiplatform/composeApp/cmake/amd64/Windows 10/CMakeFiles/edit_cache.dir
-D:/My Develop/01. Private/Workspace/ggwave-multiplatform/composeApp/cmake/amd64/Windows 10/CMakeFiles/rebuild_cache.dir

@@ -1,5 +1,0 @@
-# ninja log v5
-173	2049	1711298533363688729	CMakeFiles/ggwave.dir/Users/yang.wooram/Source/yangwooram/ggwave-multiplatform/composeApp/native/test-cpp.cpp.o	58da31a995f8e017
-173	2068	1711298533389081370	CMakeFiles/ggwave.dir/Users/yang.wooram/Source/yangwooram/ggwave-multiplatform/composeApp/native/ggwave/resampler.cpp.o	936bb8a2f6b5639c
-173	2830	1711298534143033503	CMakeFiles/ggwave.dir/Users/yang.wooram/Source/yangwooram/ggwave-multiplatform/composeApp/native/ggwave/ggwave.cpp.o	2306ef00bc752e5
-2830	2874	1711298534205861122	libggwave.dylib	c68635f89511080b

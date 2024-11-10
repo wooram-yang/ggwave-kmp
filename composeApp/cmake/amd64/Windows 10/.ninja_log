@@ -1,6 +1,0 @@
-# ninja log v5
-5	257	7329920745298773	CMakeFiles/ggwave.dir/D_/My_Develop/01._Private/Workspace/ggwave-multiplatform/composeApp/native/ggwave/resampler.cpp.obj	ed86f080018af434
-7	331	7329920746028776	CMakeFiles/ggwave.dir/D_/My_Develop/01._Private/Workspace/ggwave-multiplatform/composeApp/native/test-cpp.cpp.obj	8c76c7f1cb4f6758
-0	2037	7329920763088727	CMakeFiles/ggwave.dir/D_/My_Develop/01._Private/Workspace/ggwave-multiplatform/composeApp/native/ggwave/ggwave.cpp.obj	708ee284160ad319
-2037	2151	7329920764192803	libggwave.dll	3383b0d639d40193
-2037	2151	7329920764192803	libggwave.dll.a	3383b0d639d40193
