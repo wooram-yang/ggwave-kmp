@@ -40,6 +40,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import ggwavekmp.composeapp.generated.resources.Res
+import ggwavekmp.composeapp.generated.resources.app_name
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +72,7 @@ fun ChatScreen(
                     },
                     title = {
                         Text(
-                            text = "ggwaveKMP",
+                            text = stringResource(Res.string.app_name),
                             color = Color.White
                         )
                     },
