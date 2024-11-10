@@ -1,4 +1,4 @@
-package com.example.ggwave_multiplatform
+package com.example.ggwavekmp
 
 import ggwave.ggwave_Instance
 import ggwave.ggwave_SampleFormat

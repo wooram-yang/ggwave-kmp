@@ -1,6 +1,6 @@
 import org.gradle.internal.os.OperatingSystem
 
-rootProject.name = "ggwave_multiplatform"
+rootProject.name = "ggwavekmp"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

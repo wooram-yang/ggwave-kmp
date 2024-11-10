@@ -1,4 +1,4 @@
-package com.example.ggwave_multiplatform
+package com.example.ggwavekmp
 
 import CaptureSoundListener
 import PlaySoundListener

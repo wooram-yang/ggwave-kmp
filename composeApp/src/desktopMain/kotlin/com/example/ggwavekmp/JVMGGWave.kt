@@ -1,4 +1,4 @@
-package com.example.ggwave_multiplatform
+package com.example.ggwavekmp
 
 object JVMGGWave: GGWave {
     override var delegate: BaseCoreManager? = null
@@ -6,7 +6,6 @@ object JVMGGWave: GGWave {
     external override fun initNative()
     external override fun processCaptureData(shortData: ShortArray)
     override fun processCaptureData(byteData: ByteArray) {}
-
     external override fun sendMessage(message: String)
 
     override fun onNativeReceivedMessage(data: ByteArray) {

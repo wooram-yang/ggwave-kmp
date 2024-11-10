@@ -18,7 +18,7 @@ namespace {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_ggwave_1multiplatform_JVMGGWave_initNative(JNIEnv * env, jobject obj) {
+Java_com_example_ggwavekmp_JVMGGWave_initNative(JNIEnv * env, jobject obj) {
     ggwave_Parameters parameters = ggwave_getDefaultParameters();
     parameters.sampleFormatInp = GGWAVE_SAMPLE_FORMAT_I16;
     parameters.sampleFormatOut = GGWAVE_SAMPLE_FORMAT_I16;
@@ -31,7 +31,7 @@ Java_com_example_ggwave_1multiplatform_JVMGGWave_initNative(JNIEnv * env, jobjec
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_ggwave_1multiplatform_JVMGGWave_processCaptureData(JNIEnv *env, jobject thiz, jshortArray data) {
+Java_com_example_ggwavekmp_JVMGGWave_processCaptureData(JNIEnv *env, jobject thiz, jshortArray data) {
     jsize dataSize = env->GetArrayLength(data);
 
     jboolean isCopy = false;
@@ -53,7 +53,7 @@ Java_com_example_ggwave_1multiplatform_JVMGGWave_processCaptureData(JNIEnv *env,
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_ggwave_1multiplatform_JVMGGWave_sendMessage(JNIEnv *env, jobject thiz, jstring message) {
+Java_com_example_ggwavekmp_JVMGGWave_sendMessage(JNIEnv *env, jobject thiz, jstring message) {
     const int n = ggwave_encode(g_ggwave, env->GetStringUTFChars(message, NULL), env->GetStringLength(message), GGWAVE_TX_PROTOCOL_AUDIBLE_FAST, 10, NULL, 1);
 
     char waveform[n];
