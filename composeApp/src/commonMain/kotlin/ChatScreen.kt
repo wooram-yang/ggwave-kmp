@@ -19,8 +19,9 @@ import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -126,10 +127,15 @@ fun ChatBottom(
     modifier: Modifier
 ) {
     var chatBoxString by remember { mutableStateOf(TextFieldValue("")) }
-    val imageVectorForIconButton =  if (isCaptureProcessing) {
+    val imageVectorForListenButton =  if (isCaptureProcessing) {
         Icons.Default.Clear
     } else {
-        Icons.Default.Add
+        Icons.Default.Call
+    }
+    val imageVectorForSendButton =  if (isSendingProcessing) {
+        Icons.Default.Close
+    } else {
+        Icons.Default.Send
     }
 
     Row(modifier = modifier.padding(16.dp)) {
@@ -158,7 +164,7 @@ fun ChatBottom(
                 .align(Alignment.CenterVertically)
         ) {
             Icon(
-                imageVector = imageVectorForIconButton,
+                imageVector = imageVectorForListenButton,
                 tint = Color.White,
                 contentDescription = "Receive",
             )
@@ -181,7 +187,7 @@ fun ChatBottom(
                 .align(Alignment.CenterVertically)
         ) {
             Icon(
-                imageVector = Icons.Default.Send,
+                imageVector = imageVectorForSendButton,
                 tint = Color.White,
                 contentDescription = "Send",
             )
