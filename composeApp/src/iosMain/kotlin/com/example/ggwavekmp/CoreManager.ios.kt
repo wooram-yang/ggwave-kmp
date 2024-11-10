@@ -26,6 +26,7 @@ import platform.CoreAudioTypes.kAudioFormatLinearPCM
 import platform.CoreAudioTypes.kLinearPCMFormatFlagIsSignedInteger
 import platform.CoreFoundation.CFRunLoopGetCurrent
 import platform.CoreFoundation.CFRunLoopRun
+import platform.CoreFoundation.CFRunLoopStop
 import platform.CoreFoundation.kCFRunLoopCommonModes
 import platform.Foundation.NSData
 import platform.Foundation.NSError
@@ -101,6 +102,8 @@ object IOSCoreManager: BaseCoreManager {
     @OptIn(ExperimentalForeignApi::class)
     override fun stopCapturing() {
         willStopRecording = true
+
+        CFRunLoopStop(CFRunLoopGetCurrent())
 
         AudioQueueStop(audioQueueRef?.value, true)
         AudioQueueDispose(audioQueueRef?.value, true)
