@@ -29,7 +29,7 @@ kotlin {
             val main by getting {
                 cinterops {
                     val nativeLibrary by creating {
-                        defFile(project.file("src/nativeInterop/cinterop/ggwave.def"))
+                        defFile(project.file("ggwave.def"))
                         compilerOpts("-Inative/ggwave/")
 
                     }
@@ -129,22 +129,45 @@ compose.desktop {
     }
 }
 
-tasks.register("createDirectoryIfNotExists") {
+tasks.register("createCmakeDirectoryIfNotExists") {
     val arch = System.getProperty("os.arch")
     val os = System.getProperty("os.name").split(' ')[0]
-    val dirPath = "${projectDir}/cmake/$arch/$os"
-    val dir = file(dirPath)
-    if (dir.exists().not()) {
-        dir.mkdirs()
-        println("Directory created: $dir")
+    val cmakeDirPath = "${projectDir}/cmake/$arch/$os"
+    val cmakeDir = file(cmakeDirPath)
+    if (cmakeDir.exists().not()) {
+        cmakeDir.mkdirs()
+        println("cmake Directory created: $cmakeDir")
     }
 }
 
-tasks.register("compileCPP") {
+tasks.register("createJniLibraryDirectoryIfNotExists") {
+    val libraryDirPath = "${projectDir}/libs/jni"
+    val libraryDir = file(libraryDirPath)
+    if (libraryDir.exists().not()) {
+        libraryDir.mkdirs()
+        println("Library Directory created: $libraryDir")
+    }
+}
+
+tasks.register("createStaticLibraryDirectoryIfNotExists") {
+    val libraryDirPath = "${projectDir}/libs/static"
+    val libraryDir = file(libraryDirPath)
+    if (libraryDir.exists().not()) {
+        libraryDir.mkdirs()
+        println("Library Directory created: $libraryDir")
+    }
+}
+
+tasks.register("createDirectoryIfNotExists") {
+    dependsOn("createCmakeDirectoryIfNotExists")
+    dependsOn("createJniLibraryDirectoryIfNotExists")
+    dependsOn("createStaticLibraryDirectoryIfNotExists")
+}
+
+tasks.register("createGGWaveLibrary") {
     dependsOn("createDirectoryIfNotExists")
 
-    val libName = System.mapLibraryName("libggwave")
-    outputs.file("$projectDir/libs/jni/$libName")
+    val libName = "libggwave"
     val arch = System.getProperty("os.arch")
     val os = System.getProperty("os.name").split(' ')[0]
     val buildPath = "${projectDir}/cmake/$arch/$os"
@@ -171,7 +194,42 @@ tasks.register("compileCPP") {
             setWorkingDir(buildPath)
             commandLine("cmake", "--build", ".")
         }
+        copy {
+            from("$buildPath/$libName.dll")
+            into("$projectDir/libs/jni")
+        }
+        delete {
+            delete("$buildPath/$libName.dll")
+        }
     } else if (OperatingSystem.current().isMacOsX) {
+        exec {
+            setWorkingDir("${projectDir}/src/desktopMain")
+            commandLine(
+                "cmake",
+                "-G",
+                "Ninja",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_C_COMPILER=clang",
+                "-DCMAKE_CXX_COMPILER=clang++",
+                "-DCMAKE_APPLE_SILICON_PROCESSOR=arm64",
+                "-B",
+                buildPath,
+                "-S",
+                "."
+            )
+        }
+        exec {
+            setWorkingDir(buildPath)
+            commandLine("cmake", "--build", ".")
+        }
+        copy {
+            from("$buildPath/$libName.dylib")
+            into("$projectDir/libs/jni")
+        }
+        delete {
+            delete("$buildPath/$libName.dylib")
+        }
+
         val nativePath = "${projectDir}/native/ggwave"
         exec {
             commandLine(
@@ -206,16 +264,16 @@ tasks.register("compileCPP") {
                 "libtool",
                 "-static",
                 "-o",
-                "${nativePath}/libggwave.a",
+                "$projectDir/libs/static/$libName.a",
                 "${nativePath}/ggwave.o",
                 "${nativePath}/resampler.o"
             )
         }
-    }
-
-    copy {
-        from("$buildPath/$libName")
-        into("$projectDir/libs/jni")
+        delete {
+            delete(
+                "${nativePath}/ggwave.o",
+                "${nativePath}/resampler.o")
+        }
     }
 }
-tasks.getByPath("desktopProcessResources").dependsOn("compileCPP")
+tasks.getByPath("desktopProcessResources").dependsOn("createGGWaveLibrary")

@@ -1,3 +1,0 @@
-/Users/yang.wooram/Source/yangwooram/ggwave-multiplatform/composeApp/cmake/aarch64/Mac OS X/CMakeFiles/ggwave.dir
-/Users/yang.wooram/Source/yangwooram/ggwave-multiplatform/composeApp/cmake/aarch64/Mac OS X/CMakeFiles/edit_cache.dir
-/Users/yang.wooram/Source/yangwooram/ggwave-multiplatform/composeApp/cmake/aarch64/Mac OS X/CMakeFiles/rebuild_cache.dir
