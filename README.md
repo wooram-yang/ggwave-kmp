@@ -5,9 +5,14 @@
 ![Supported Platforms](https://img.shields.io/badge/platform-JVM-red.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+
+![screen_video_2024-11-16-21 52 58_720p](https://github.com/user-attachments/assets/efd5053a-4076-494d-aeea-7cbe3e5510c6)
+
 ## Overview
 
-ggwave-kmp is a Kotlin Multiplatform Project (KMP) designed to send and receive messages across Android, iOS, and desktop platforms like Windows and macOS through sound waves. This project is written in Kotlin and uses Compose Multiplatform, while the core library, ggwave, is written in C/C++. The fundamental technology is based on an FSK-based transmission protocol. For more details, you can read the specification [here](https://github.com/ggerganov/ggwave).
+ggwave-kmp is a Kotlin Multiplatform Project (KMP) designed to send and receive messages across Android, iOS, and desktop platforms like Windows and macOS through sound waves. This project is written in Kotlin and uses Compose Multiplatform, while the core library, [ggwave](https://github.com/ggerganov/ggwave), is written in C/C++. The fundamental technology is based on an FSK-based transmission protocol. For more details, you can read the specification [here](https://github.com/ggerganov/ggwave?tab=readme-ov-file#technical-details).
+
+It consists of a common UI codebase using Compose Multiplatform and three platform-specific components for capturing and playing audio data.
 
 
 ## How to use
