@@ -24,9 +24,15 @@ ggwave-kmp is a Kotlin Multiplatform Project (KMP) designed to send and receive 
 
 
 ## Prerequisites
+### On Windows
+- MinGW-w64 (gcc, g++)
 - cmake version above 3.20.0 
   - ninja
-- Xcode Command Line Tools
+ 
+### On macOS
+- Xcode Command Line Tools (clang, clang++)
+- cmake version above 3.20.0 
+  - ninja
 
 
 ## Building
@@ -40,11 +46,9 @@ Ensure that you have the necessary configurations to run an Android or iOS app. 
 
 ## Screenshot
 
-<img src="https://github.com/user-attachments/assets/9a9cb95f-1669-4b49-b260-56f283d93370" width=1000 />
-<br/><br/>
+<img src="https://github.com/user-attachments/assets/6ccb66c3-8697-4b94-98e7-38c09a19d177" width="1000" /> <br/><br/>
 
-https://github.com/user-attachments/assets/0a26af7c-f587-4b80-9923-1c4029f0f1e6
-
+<video src="https://github.com/user-attachments/assets/f043ec36-d3e9-4e36-bf2e-2e1496815b59" width="1000" /> <br/><br/>
 
 ## License
 
