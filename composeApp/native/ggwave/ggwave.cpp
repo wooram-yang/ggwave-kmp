@@ -95,7 +95,7 @@ int ggwave_encode(
 extern "C"
 int ggwave_decode(
         ggwave_Instance instance,
-        char * dataBuffer,
+        const char * dataBuffer,
         int dataSize,
         char * outputBuffer) {
     GGWave * ggWave = (GGWave *) g_instances[instance];

@@ -214,7 +214,7 @@ extern "C" {
     //
     GGWAVE_API int ggwave_decode(
             ggwave_Instance instance,
-            char * dataBuffer,
+            const char * dataBuffer,
             int dataSize,
             char * outputBuffer);
 
