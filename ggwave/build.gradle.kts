@@ -31,7 +31,7 @@ kotlin {
     jvm()
 
     android {
-        namespace = "io.github.wooramyang.ggwave"
+        namespace = "io.github.moreflow.ggwave"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 

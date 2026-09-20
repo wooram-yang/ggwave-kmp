@@ -2,7 +2,7 @@ package com.example.ggwavekmp.ui.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.wooramyang.ggwave.GgwaveSession
+import io.github.moreflow.ggwave.GgwaveSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

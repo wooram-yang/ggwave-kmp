@@ -28,7 +28,7 @@ kotlin {
 ```
 
 ```kotlin
-import io.github.wooramyang.ggwave.GgwaveSession
+import io.github.moreflow.ggwave.GgwaveSession
 
 val session = GgwaveSession.create()
 session.startCapture()
@@ -38,7 +38,7 @@ session.close()
 ```
 
 ```kotlin
-import io.github.wooramyang.ggwave.GgwaveSession
+import io.github.moreflow.ggwave.GgwaveSession
 
 val session = GgwaveSession.create()
 session.send("hello")

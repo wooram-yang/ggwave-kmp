@@ -23,7 +23,7 @@ namespace {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_io_github_wooramyang_ggwave_internal_JVMGGWave_initNative(JNIEnv * env, jobject obj, jint sampleRate) {
+Java_io_github_moreflow_ggwave_internal_JVMGGWave_initNative(JNIEnv * env, jobject obj, jint sampleRate) {
     freeInstance();
 
     ggwave_Parameters parameters = ggwave_getDefaultParameters();
@@ -36,13 +36,13 @@ Java_io_github_wooramyang_ggwave_internal_JVMGGWave_initNative(JNIEnv * env, job
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_io_github_wooramyang_ggwave_internal_JVMGGWave_releaseNative(JNIEnv * env, jobject obj) {
+Java_io_github_moreflow_ggwave_internal_JVMGGWave_releaseNative(JNIEnv * env, jobject obj) {
     freeInstance();
 }
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_io_github_wooramyang_ggwave_internal_JVMGGWave_decodeNative(JNIEnv *env, jobject thiz, jshortArray data) {
+Java_io_github_moreflow_ggwave_internal_JVMGGWave_decodeNative(JNIEnv *env, jobject thiz, jshortArray data) {
     if (g_ggwave < 0 || data == nullptr) {
         return nullptr;
     }
@@ -71,7 +71,7 @@ Java_io_github_wooramyang_ggwave_internal_JVMGGWave_decodeNative(JNIEnv *env, jo
 
 extern "C"
 JNIEXPORT jshortArray JNICALL
-Java_io_github_wooramyang_ggwave_internal_JVMGGWave_encodeNative(JNIEnv *env, jobject thiz, jstring message, jint volume) {
+Java_io_github_moreflow_ggwave_internal_JVMGGWave_encodeNative(JNIEnv *env, jobject thiz, jstring message, jint volume) {
     if (g_ggwave < 0 || message == nullptr) {
         return nullptr;
     }
