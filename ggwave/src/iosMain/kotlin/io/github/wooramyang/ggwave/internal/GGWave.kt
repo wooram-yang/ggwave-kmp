@@ -12,6 +12,7 @@ import io.github.wooramyang.ggwave.GgwaveConfig
 import io.github.wooramyang.ggwave.GgwaveException
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.copy
 import kotlinx.cinterop.refTo
 import kotlinx.cinterop.usePinned
 
