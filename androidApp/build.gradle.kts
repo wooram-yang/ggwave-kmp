@@ -21,6 +21,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            pickFirsts += setOf("**/libggwave.so")
+        }
     }
     buildTypes {
         release {
@@ -34,11 +37,6 @@ android {
     buildFeatures {
         compose = true
     }
-    externalNativeBuild {
-        cmake {
-            path = file("../composeApp/src/androidMain/CMakeLists.txt")
-        }
-    }
 }
 
 kotlin {
@@ -46,8 +44,13 @@ kotlin {
 }
 
 dependencies {
-    implementation(projects.composeApp)
+    implementation(projects.sampleApp)
+    implementation(projects.ggwave)
     implementation(libs.androidx.activity.compose)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
+}
+
+tasks.named("preBuild") {
+    dependsOn(":ggwave:buildGGWaveAndroidLibrary")
 }

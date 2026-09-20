@@ -12,10 +12,47 @@
 
 ggwave-kmp is a Kotlin Multiplatform Project (KMP) designed to send and receive messages across Android, iOS, and desktop platforms like Windows and macOS through sound waves. This project is written in Kotlin and uses Compose Multiplatform, while the core library, [ggwave](https://github.com/ggerganov/ggwave), is written in C/C++. The fundamental technology is based on an FSK-based transmission protocol. For more details, you can read the specification [here](https://github.com/ggerganov/ggwave?tab=readme-ov-file#technical-details).
 
-It consists of a common UI codebase using Compose Multiplatform and three platform-specific components for capturing and playing audio data.
+The sound codec and microphone/speaker session live in the `:ggwave` KMP library. Compose UI in `:sampleApp` is a sample client.
 
+## Using the library
 
-## How to use
+From another module in this repository:
+
+```kotlin
+// build.gradle.kts
+kotlin {
+    sourceSets.commonMain.dependencies {
+        implementation(projects.ggwave)
+    }
+}
+```
+
+```kotlin
+import io.github.wooramyang.ggwave.GgwaveSession
+
+val session = GgwaveSession.create()
+session.startCapture()
+session.receivedMessages.collect { message -> /* inbound text */ }
+session.stopCapture()
+session.close()
+```
+
+```kotlin
+import io.github.wooramyang.ggwave.GgwaveSession
+
+val session = GgwaveSession.create()
+session.send("hello")
+```
+
+Android apps must declare and request `RECORD_AUDIO`. The sample does this in `androidApp`. The library does not show a permission dialog.
+
+```xml
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+```
+
+Native artifacts are built by `:ggwave` (`libggwave` JNI for JVM/Android, `libggwave.a` for iOS cinterop). JVM loads the JNI library from resources; you do not need `-Djava.library.path`. Only one `GgwaveSession` can be active in a process at a time; call `close()` before creating another.
+
+## How to use the sample app
 1. Press the receive button to get messages through the microphone
 <br/><br/> <img src="https://github.com/user-attachments/assets/aceee896-e837-4eab-abbb-e094c607d76f" width="370" /> <br/><br/>
 
@@ -45,7 +82,7 @@ Ensure that you have the necessary configurations to run an Android or iOS app. 
 
 ### JVM (Windows, macOS)
 ```
-./gradlew :composeApp:run
+./gradlew :sampleApp:run
 ```
 
 

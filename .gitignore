@@ -14,8 +14,9 @@
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
 captures
-composeApp/cmake
-composeApp/libs
+ggwave/cmake
+ggwave/libs
+ggwave/src/androidMain/jniLibs
 gradle/wrapper/gradle-wrapper.jar
 local.properties
 xcuserdata
