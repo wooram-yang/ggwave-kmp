@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -17,6 +18,20 @@ val cmakeBuildDir = layout.projectDirectory.dir("cmake/$hostArch/$hostOsFamily")
 val jniDir = layout.projectDirectory.dir("libs/jni")
 val nativeGgwaveDir = layout.projectDirectory.dir("native/ggwave")
 val generatedJniResources = layout.buildDirectory.dir("generated/jniResources")
+val nativeToolPath = (
+    listOf("/opt/homebrew/bin", "/usr/local/bin")
+        .filter { isMacOs && file(it).isDirectory } +
+        System.getenv("PATH").orEmpty().split(File.pathSeparator).filter(String::isNotBlank)
+    ).distinct().joinToString(File.pathSeparator)
+fun findNativeTool(name: String): String = if (isMacOs) {
+    listOf("/opt/homebrew/bin/$name", "/usr/local/bin/$name")
+        .firstOrNull { file(it).isFile }
+        ?: name
+} else {
+    name
+}
+val cmakeExecutable = findNativeTool("cmake")
+val ninjaExecutable = findNativeTool("ninja")
 val jniResourceFolder = when {
     isWindows -> "windows-x86_64"
     isMacOs && (hostArch == "aarch64" || hostArch == "arm64") -> "macos-aarch64"
@@ -132,8 +147,10 @@ fun findAndroidNdk(): java.io.File? {
 if (isWindows || isMacOs || isLinux) {
     val configureGgwaveCmake by tasks.registering(Exec::class) {
         workingDir = file("src/desktopMain")
+        environment("PATH", nativeToolPath)
         val arguments = mutableListOf(
-            "cmake", "-G", "Ninja",
+            cmakeExecutable, "-G", "Ninja",
+            "-DCMAKE_MAKE_PROGRAM=$ninjaExecutable",
             "-DCMAKE_BUILD_TYPE=Release",
             "-B", cmakeBuildDir.asFile.absolutePath,
             "-S", ".",
@@ -156,7 +173,8 @@ if (isWindows || isMacOs || isLinux) {
     val buildGgwaveCmake by tasks.registering(Exec::class) {
         dependsOn(configureGgwaveCmake)
         workingDir = cmakeBuildDir.asFile
-        commandLine("cmake", "--build", ".")
+        environment("PATH", nativeToolPath)
+        commandLine(cmakeExecutable, "--build", ".")
     }
     val copyGgwaveJvmLibrary by tasks.registering(Copy::class) {
         dependsOn(buildGgwaveCmake)
@@ -196,17 +214,19 @@ tasks.register("buildGGWaveAndroidLibrary") {
     doLast {
         val ndk = findAndroidNdk()
             ?: throw GradleException("Android NDK is required to build ggwave-core Android artifacts")
-        val cmake = if (file("/opt/homebrew/bin/cmake").exists()) "/opt/homebrew/bin/cmake" else "cmake"
         fun run(vararg arguments: String) {
-            val result = ProcessBuilder(*arguments).inheritIO().start().waitFor()
+            val process = ProcessBuilder(*arguments)
+            process.environment()["PATH"] = nativeToolPath
+            val result = process.inheritIO().start().waitFor()
             if (result != 0) throw GradleException("Command failed ($result): ${arguments.joinToString(" ")}")
         }
         androidAbis.forEach { abi ->
             val buildDirectory = layout.projectDirectory.dir("cmake/android/$abi").asFile
             buildDirectory.mkdirs()
             run(
-                cmake,
+                cmakeExecutable,
                 "-G", "Ninja",
+                "-DCMAKE_MAKE_PROGRAM=$ninjaExecutable",
                 "-DCMAKE_TOOLCHAIN_FILE=${ndk.absolutePath}/build/cmake/android.toolchain.cmake",
                 "-DANDROID_ABI=$abi",
                 "-DANDROID_PLATFORM=android-24",
@@ -214,7 +234,7 @@ tasks.register("buildGGWaveAndroidLibrary") {
                 "-B", buildDirectory.absolutePath,
                 "-S", file("src/androidMain").absolutePath,
             )
-            run(cmake, "--build", buildDirectory.absolutePath)
+            run(cmakeExecutable, "--build", buildDirectory.absolutePath)
             val library = listOf(
                 file("$buildDirectory/libggwave.so"),
                 file("$buildDirectory/lib/libggwave.so"),
