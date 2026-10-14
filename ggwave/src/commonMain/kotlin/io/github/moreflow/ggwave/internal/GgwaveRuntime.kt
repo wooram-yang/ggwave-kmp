@@ -9,6 +9,7 @@ internal interface GgwaveRuntime {
     fun stopPlayback()
     fun setListeners(
         onReceivedMessage: (String) -> Unit,
+        onCaptureFailed: (Throwable) -> Unit,
         onPlayEnded: () -> Unit,
         onPlayFailed: (Throwable) -> Unit,
     )

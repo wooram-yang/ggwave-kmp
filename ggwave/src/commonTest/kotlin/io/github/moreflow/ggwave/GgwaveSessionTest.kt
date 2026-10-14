@@ -8,8 +8,12 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class GgwaveSessionTest {
     @Test
     fun startAndStopCaptureUpdatesState() = runTest {
@@ -40,12 +44,29 @@ class GgwaveSessionTest {
 
     @Test
     fun sendWaitsUntilPlaybackEnds() = runTest {
+        val runtime = FakeGgwaveRuntime(completePlaybackImmediately = false)
+        val session = GgwaveSession(runtime)
+
+        val sendJob = launch { session.send("hello") }
+        runCurrent()
+
+        assertEquals("hello", runtime.lastMessage)
+        assertTrue(session.isPlaying.value)
+        assertTrue(sendJob.isActive)
+
+        runtime.finishPlayback()
+        sendJob.join()
+        assertFalse(session.isPlaying.value)
+    }
+
+    @Test
+    fun sendPreservesLeadingAndTrailingWhitespace() = runTest {
         val runtime = FakeGgwaveRuntime()
         val session = GgwaveSession(runtime)
 
-        session.send("hello")
-        assertEquals("hello", runtime.lastMessage)
-        assertFalse(session.isPlaying.value)
+        session.send(" hello ")
+
+        assertEquals(" hello ", runtime.lastMessage)
     }
 
     @Test
@@ -70,6 +91,43 @@ class GgwaveSessionTest {
     }
 
     @Test
+    fun captureFailureResetsCaptureState() = runTest {
+        val runtime = FakeGgwaveRuntime()
+        val session = GgwaveSession(runtime)
+        session.startCapture()
+
+        runtime.failCapture()
+
+        assertFalse(session.isCapturing.value)
+    }
+
+    @Test
+    fun synchronousCaptureFailureRollsBackCaptureState() = runTest {
+        val session = GgwaveSession(FakeGgwaveRuntime(failCaptureOnStart = true))
+
+        assertFailsWith<GgwaveException> {
+            session.startCapture()
+        }
+
+        assertFalse(session.isCapturing.value)
+    }
+
+    @Test
+    fun closeCancelsPendingPlaybackAndStopsRuntime() = runTest {
+        val runtime = FakeGgwaveRuntime(completePlaybackImmediately = false)
+        val session = GgwaveSession(runtime)
+        val sendJob = launch { session.send("hello") }
+        runCurrent()
+
+        session.close()
+        sendJob.join()
+
+        assertTrue(sendJob.isCancelled)
+        assertTrue(runtime.playbackStopped)
+        assertFalse(session.isPlaying.value)
+    }
+
+    @Test
     fun startCaptureAfterCloseThrows() = runTest {
         val session = GgwaveSession(FakeGgwaveRuntime())
         session.close()
@@ -81,8 +139,11 @@ class GgwaveSessionTest {
     @Test
     fun sessionGuardAllowsOnlyOneAcquire() {
         assertTrue(SessionGuard.tryAcquire())
-        assertFalse(SessionGuard.tryAcquire())
-        SessionGuard.release()
+        try {
+            assertFalse(SessionGuard.tryAcquire())
+        } finally {
+            SessionGuard.release()
+        }
         assertTrue(SessionGuard.tryAcquire())
         SessionGuard.release()
     }
@@ -90,14 +151,21 @@ class GgwaveSessionTest {
 
 private class FakeGgwaveRuntime(
     private val failPlayback: Boolean = false,
+    private val completePlaybackImmediately: Boolean = true,
+    private val failCaptureOnStart: Boolean = false,
 ) : GgwaveRuntime {
     var capturing = false
     var lastMessage: String? = null
     var closed = false
+    var playbackStopped = false
+    private var onCaptureFailed: (Throwable) -> Unit = {}
     private var onPlayEnded: () -> Unit = {}
     private var onPlayFailed: (Throwable) -> Unit = {}
 
     override fun startCapturing() {
+        if (failCaptureOnStart) {
+            throw GgwaveException("capture failed")
+        }
         capturing = true
     }
 
@@ -109,23 +177,36 @@ private class FakeGgwaveRuntime(
         lastMessage = message
         if (failPlayback) {
             onPlayFailed(GgwaveException("encode failed"))
-        } else {
+        } else if (completePlaybackImmediately) {
             onPlayEnded()
         }
     }
 
-    override fun stopPlayback() {}
+    override fun stopPlayback() {
+        playbackStopped = true
+    }
 
     override fun setListeners(
         onReceivedMessage: (String) -> Unit,
+        onCaptureFailed: (Throwable) -> Unit,
         onPlayEnded: () -> Unit,
         onPlayFailed: (Throwable) -> Unit,
     ) {
+        this.onCaptureFailed = onCaptureFailed
         this.onPlayEnded = onPlayEnded
         this.onPlayFailed = onPlayFailed
     }
 
     override fun close() {
         closed = true
+    }
+
+    fun finishPlayback() {
+        onPlayEnded()
+    }
+
+    fun failCapture() {
+        capturing = false
+        onCaptureFailed(GgwaveException("capture failed"))
     }
 }

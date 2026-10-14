@@ -38,6 +38,9 @@ class GgwaveSession internal constructor(
                     _receivedMessages.tryEmit(message)
                 }
             },
+            onCaptureFailed = {
+                _isCapturing.value = false
+            },
             onPlayEnded = {
                 playEnded?.complete(Unit)
             },
@@ -50,8 +53,13 @@ class GgwaveSession internal constructor(
     fun startCapture() {
         checkActive()
         if (_isCapturing.value) return
-        runtime.startCapturing()
         _isCapturing.value = true
+        try {
+            runtime.startCapturing()
+        } catch (error: Throwable) {
+            _isCapturing.value = false
+            throw error
+        }
     }
 
     fun stopCapture() {
@@ -62,15 +70,15 @@ class GgwaveSession internal constructor(
 
     suspend fun send(message: String) {
         checkActive()
-        val text = message.trim()
-        require(text.isNotEmpty()) { "message must not be blank" }
+        require(message.isNotBlank()) { "message must not be blank" }
 
         sendMutex.withLock {
+            checkActive()
             val done = CompletableDeferred<Unit>()
             playEnded = done
             _isPlaying.value = true
             try {
-                runtime.startPlayback(text)
+                runtime.startPlayback(message)
                 withTimeout(PLAYBACK_TIMEOUT_MS) {
                     done.await()
                 }
