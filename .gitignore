@@ -17,6 +17,10 @@ captures
 ggwave/cmake
 ggwave/libs
 ggwave/src/androidMain/jniLibs
+ggwave-core/cmake
+ggwave-core/libs
+ggwave-core/prebuilt
+ggwave-core/src/androidMain/jniLibs
 gradle/wrapper/gradle-wrapper.jar
 local.properties
 xcuserdata

@@ -23,8 +23,8 @@ Compose UI in `:sampleApp` is a sample client.
 
 Maven coordinates:
 
-- `io.github.wooram-yang:ggwave-core:0.1.0`
-- `io.github.wooram-yang:ggwave-kmp:0.1.0`
+- `io.github.wooram-yang:ggwave-core:0.2.0`
+- `io.github.wooram-yang:ggwave-kmp:0.2.0`
 
 ### From this repository
 
@@ -47,7 +47,7 @@ repositories {
 
 kotlin {
     sourceSets.commonMain.dependencies {
-        implementation("io.github.wooram-yang:ggwave-kmp:0.1.0")
+        implementation("io.github.wooram-yang:ggwave-kmp:0.2.0")
     }
 }
 ```

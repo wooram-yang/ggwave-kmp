@@ -86,7 +86,7 @@ jobs:
           ./gradlew :ggwave-core:jvmTest :ggwave:jvmTest --no-daemon
           ./gradlew :ggwave-core:publishAllPublicationsToGitHubPackagesRepository :ggwave:publishAllPublicationsToGitHubPackagesRepository --no-daemon
 
-      - name: Publish to Maven Central
+      - name: Upload to Maven Central
         if: env.CENTRAL_USERNAME != ''
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ env.CENTRAL_USERNAME }}

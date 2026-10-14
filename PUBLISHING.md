@@ -3,8 +3,8 @@
 Published modules:
 
 ```text
-io.github.wooram-yang:ggwave-core:0.1.0
-io.github.wooram-yang:ggwave-kmp:0.1.0
+io.github.wooram-yang:ggwave-core:0.2.0
+io.github.wooram-yang:ggwave-kmp:0.2.0
 ```
 
 `ggwave-core` contains the codec API and native bindings. `ggwave-kmp` contains
@@ -63,7 +63,17 @@ Consumers must add the authenticated GitHub Packages Maven repository.
 
 ## Maven Central
 
-Configure the Central Portal and signing properties outside the repository:
+Before the first release:
+
+1. Sign in to the [Central Portal](https://central.sonatype.com/) with GitHub.
+2. Verify that the `io.github.wooram-yang` namespace is available.
+3. Generate a publishing token from the
+   [user token page](https://central.sonatype.com/usertoken).
+4. Create a GPG key, publish its public key to a supported key server, and
+   export the ASCII-armored private key for CI signing.
+
+Configure the Central Portal token and signing properties outside the
+repository:
 
 ```properties
 mavenCentralUsername=<token-username>
@@ -90,3 +100,9 @@ The GitHub Actions workflow expects the equivalent repository secrets:
 - `SIGNING_IN_MEMORY_KEY_PASSWORD`
 
 The Maven Central step is skipped when `MAVEN_CENTRAL_USERNAME` is absent.
+
+`publishToMavenCentral` uploads and validates a deployment but deliberately
+does not release it automatically. After the workflow succeeds, open
+[Central Portal deployments](https://central.sonatype.com/publishing/deployments),
+review both modules, and click **Publish**. Published versions are immutable,
+so any correction must use a new version.
