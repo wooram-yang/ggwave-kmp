@@ -33,5 +33,6 @@ plugins {
 }
 
 include(":ggwave")
+include(":ggwave-core")
 include(":sampleApp")
 include(":androidApp")

@@ -1,0 +1,98 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  jvm-native:
+    name: JVM native (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - windows-latest
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
+          - macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build JVM native library
+        if: runner.os != 'Windows'
+        run: ./gradlew :ggwave-core:buildGGWaveJvmLibrary --no-daemon
+
+      - name: Build JVM native library (Windows)
+        if: runner.os == 'Windows'
+        run: .\gradlew.bat :ggwave-core:buildGGWaveJvmLibrary --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jvm-native-${{ matrix.runner }}
+          path: ggwave-core/build/generated/jniResources/native
+          if-no-files-found: error
+
+  publish:
+    needs: jvm-native
+    runs-on: macos-latest
+    env:
+      CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27d
+          add-to-path: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: jvm-native-*
+          path: ggwave-core/prebuilt/jvm/native
+          merge-multiple: true
+
+      - name: Verify assembled JVM native libraries
+        run: |
+          test -f ggwave-core/prebuilt/jvm/native/windows-x86_64/libggwave.dll
+          test -f ggwave-core/prebuilt/jvm/native/linux-x86_64/libggwave.so
+          test -f ggwave-core/prebuilt/jvm/native/linux-aarch64/libggwave.so
+          test -f ggwave-core/prebuilt/jvm/native/macos-aarch64/libggwave.dylib
+          test -f ggwave-core/prebuilt/jvm/native/macos-x86_64/libggwave.dylib
+
+      - name: Test and publish to GitHub Packages
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          ./gradlew :ggwave-core:jvmTest :ggwave:jvmTest --no-daemon
+          ./gradlew :ggwave-core:publishAllPublicationsToGitHubPackagesRepository :ggwave:publishAllPublicationsToGitHubPackagesRepository --no-daemon
+
+      - name: Publish to Maven Central
+        if: env.CENTRAL_USERNAME != ''
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ env.CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: ./gradlew :ggwave-core:publishToMavenCentral :ggwave:publishToMavenCentral --no-daemon

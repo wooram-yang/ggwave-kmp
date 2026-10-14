@@ -1,6 +1,8 @@
 package io.github.moreflow.ggwave.internal
 
 import io.github.moreflow.ggwave.GgwaveConfig
+import io.github.moreflow.ggwave.GgwaveCodec
+import io.github.moreflow.ggwave.GgwaveCodecConfig
 import io.github.moreflow.ggwave.GgwaveException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +21,9 @@ import javax.sound.sampled.TargetDataLine
 internal class JvmGgwaveRuntime(
     private val config: GgwaveConfig,
 ) : GgwaveRuntime {
-    private val ggWave: GGWave = createGGWave()
+    private val codec = GgwaveCodec.create(
+        GgwaveCodecConfig(config.sampleRate, config.sampleRate),
+    )
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private var onReceivedMessage: (String) -> Unit = {}
@@ -29,10 +33,6 @@ internal class JvmGgwaveRuntime(
     private var clip: Clip? = null
     private var captureLine: TargetDataLine? = null
     private var captureJob: Job? = null
-
-    init {
-        ggWave.init(config)
-    }
 
     override fun setListeners(
         onReceivedMessage: (String) -> Unit,
@@ -65,7 +65,7 @@ internal class JvmGgwaveRuntime(
                     if (!isActive || read <= 0) continue
                     val shortArray = ShortArray(read / 2)
                     ByteBuffer.wrap(buffer, 0, read).order(ByteOrder.BIG_ENDIAN).asShortBuffer()[shortArray]
-                    val payload = ggWave.decode(shortArray) ?: continue
+                    val payload = codec.decode(shortArray) ?: continue
                     val text = payload.toGgwavePayload()
                     if (text.isNotBlank()) {
                         onReceivedMessage(text)
@@ -90,7 +90,7 @@ internal class JvmGgwaveRuntime(
 
     override fun startPlayback(message: String) {
         val encoded = try {
-            ggWave.encode(message, config.volume)
+            codec.encode(message.encodeToByteArray(), volume = config.volume)
         } catch (error: Throwable) {
             onPlayFailed(error)
             return
@@ -138,7 +138,7 @@ internal class JvmGgwaveRuntime(
         stopPlayback()
         clip?.close()
         clip = null
-        ggWave.close()
+        codec.close()
         scope.cancel()
     }
 }

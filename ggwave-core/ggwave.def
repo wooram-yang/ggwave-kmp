@@ -1,0 +1,3 @@
+headers = ggwave.h
+noStringConversion = ggwave_decode ggwave_encode
+linkerOpts = -lc++

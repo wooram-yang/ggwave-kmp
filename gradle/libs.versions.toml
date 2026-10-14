@@ -8,6 +8,7 @@ compose-plugin = "1.12.0"
 kotlin = "2.4.20"
 kotlinx-coroutines = "1.10.2"
 lifecycleViewmodelCompose = "2.11.0"
+mavenPublish = "0.37.0"
 material3 = "1.9.0"
 materialIconsExtended = "1.7.3"
 materialKolor = "5.0.1"
@@ -37,3 +38,4 @@ androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library",
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }

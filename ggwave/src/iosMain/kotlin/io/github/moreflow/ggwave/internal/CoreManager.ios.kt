@@ -1,6 +1,8 @@
 package io.github.moreflow.ggwave.internal
 
 import io.github.moreflow.ggwave.GgwaveConfig
+import io.github.moreflow.ggwave.GgwaveCodec
+import io.github.moreflow.ggwave.GgwaveCodecConfig
 import io.github.moreflow.ggwave.GgwaveException
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ByteVar
@@ -45,6 +47,7 @@ import platform.CoreAudioTypes.AudioTimeStamp
 import platform.CoreAudioTypes.kAudioFormatLinearPCM
 import platform.CoreAudioTypes.kLinearPCMFormatFlagIsSignedInteger
 import platform.CoreFoundation.CFRunLoopGetCurrent
+import platform.CoreFoundation.CFRunLoopRef
 import platform.CoreFoundation.CFRunLoopRun
 import platform.CoreFoundation.CFRunLoopStop
 import platform.CoreFoundation.kCFRunLoopCommonModes
@@ -86,12 +89,17 @@ internal fun audioQueueInputCallback(
 internal class IosGgwaveRuntime(
     private val config: GgwaveConfig,
 ) : GgwaveRuntime {
-    private val inputSampleRate = 44100.0
+    private val inputSampleRate = config.sampleRate.toDouble()
     private val outputSampleRate = config.sampleRate.toDouble()
-    private val bufferSize = 16 * 1024
+    private val bufferSize = config.captureBufferSize
     private val bufferNum = 3
 
-    private val ggWave: GGWave = createGGWave()
+    private val codec = GgwaveCodec.create(
+        GgwaveCodecConfig(
+            inputSampleRate = config.sampleRate,
+            outputSampleRate = config.sampleRate,
+        ),
+    )
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private var onReceivedMessage: (String) -> Unit = {}
@@ -99,11 +107,12 @@ internal class IosGgwaveRuntime(
     private var onPlayFailed: (Throwable) -> Unit = {}
 
     private var audioPlayer: AVAudioPlayer? = null
-    private var audioQueueRef: AudioQueueRefVar? = null
+    private val audioPlayerDelegate = AVAudioPlayerDelegate()
+    private var audioQueue: AudioQueueRef? = null
+    private var captureRunLoop: CFRunLoopRef? = null
     internal var captureJob: Job? = null
 
     init {
-        ggWave.init(config)
         activeIosRuntime = this
     }
 
@@ -118,7 +127,12 @@ internal class IosGgwaveRuntime(
     }
 
     internal fun onCaptureBytes(byteData: ByteArray) {
-        val payload = ggWave.decode(byteData) ?: return
+        val samples = ShortArray(byteData.size / 2) { index ->
+            val low = byteData[index * 2].toInt() and 0xFF
+            val high = byteData[(index * 2) + 1].toInt() shl 8
+            (low or high).toShort()
+        }
+        val payload = codec.decode(samples) ?: return
         val text = payload.toGgwavePayload()
         if (text.isNotBlank()) {
             onReceivedMessage(text)
@@ -140,7 +154,7 @@ internal class IosGgwaveRuntime(
                     mReserved = 0u
                     mFormatFlags = kLinearPCMFormatFlagIsSignedInteger
                 }
-                audioQueueRef = alloc<AudioQueueRefVar>()
+                val queueRef = alloc<AudioQueueRefVar>()
 
                 val callback = staticCFunction(::audioQueueInputCallback)
                 val status: OSStatus = AudioQueueNewInput(
@@ -150,7 +164,7 @@ internal class IosGgwaveRuntime(
                     CFRunLoopGetCurrent(),
                     kCFRunLoopCommonModes,
                     0u,
-                    audioQueueRef?.ptr,
+                    queueRef.ptr,
                 )
 
                 if (status != 0) {
@@ -158,14 +172,22 @@ internal class IosGgwaveRuntime(
                     return@memScoped
                 }
 
+                val queue = queueRef.value
+                audioQueue = queue
+
                 for (i in 0 until bufferNum) {
                     val bufferRefVar: AudioQueueBufferRefVar = alloc<AudioQueueBufferRefVar>()
-                    AudioQueueAllocateBuffer(audioQueueRef?.value, bufferSize.toUInt(), bufferRefVar.ptr)
-                    AudioQueueEnqueueBuffer(audioQueueRef?.value, bufferRefVar.value, 0u, null)
+                    AudioQueueAllocateBuffer(queue, bufferSize.toUInt(), bufferRefVar.ptr)
+                    AudioQueueEnqueueBuffer(queue, bufferRefVar.value, 0u, null)
                 }
 
-                AudioQueueStart(audioQueueRef?.value, null)
-                CFRunLoopRun()
+                AudioQueueStart(queue, null)
+                captureRunLoop = CFRunLoopGetCurrent()
+                try {
+                    CFRunLoopRun()
+                } finally {
+                    captureRunLoop = null
+                }
             }
         }
     }
@@ -173,16 +195,16 @@ internal class IosGgwaveRuntime(
     override fun stopCapturing() {
         val job = captureJob
         captureJob = null
-        CFRunLoopStop(CFRunLoopGetCurrent())
-        AudioQueueStop(audioQueueRef?.value, true)
-        AudioQueueDispose(audioQueueRef?.value, true)
-        audioQueueRef = null
+        captureRunLoop?.let { CFRunLoopStop(it) }
+        AudioQueueStop(audioQueue, true)
+        AudioQueueDispose(audioQueue, true)
+        audioQueue = null
         job?.cancel()
     }
 
     override fun startPlayback(message: String) {
         val encoded = try {
-            ggWave.encode(message, config.volume)
+            codec.encode(message.encodeToByteArray(), volume = config.volume)
         } catch (error: Throwable) {
             onPlayFailed(error)
             return
@@ -215,7 +237,7 @@ internal class IosGgwaveRuntime(
                     onPlayFailed(GgwaveException(error.localizedDescription))
                     return@launch
                 }
-                audioPlayer?.setDelegate(AVAudioPlayerDelegate())
+                audioPlayer?.setDelegate(audioPlayerDelegate)
                 audioPlayer?.play()
             } catch (error: Throwable) {
                 onPlayFailed(error)
@@ -226,7 +248,7 @@ internal class IosGgwaveRuntime(
     override fun close() {
         stopCapturing()
         stopPlayback()
-        ggWave.close()
+        codec.close()
         scope.cancel()
         if (activeIosRuntime === this) {
             activeIosRuntime = null

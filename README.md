@@ -12,20 +12,67 @@
 
 ggwave-kmp is a Kotlin Multiplatform Project (KMP) designed to send and receive messages across Android, iOS, and desktop platforms like Windows and macOS through sound waves. This project is written in Kotlin and uses Compose Multiplatform, while the core library, [ggwave](https://github.com/ggerganov/ggwave), is written in C/C++. The fundamental technology is based on an FSK-based transmission protocol. For more details, you can read the specification [here](https://github.com/ggerganov/ggwave?tab=readme-ov-file#technical-details).
 
-The sound codec and microphone/speaker session live in the `:ggwave` KMP library. Compose UI in `:sampleApp` is a sample client.
+The project is split into two KMP libraries:
+
+- `:ggwave-core` provides the binary payload/PCM codec and native ggwave bindings.
+- `:ggwave` provides microphone and speaker sessions on top of `:ggwave-core`.
+
+Compose UI in `:sampleApp` is a sample client.
 
 ## Using the library
 
-From another module in this repository:
+Maven coordinates:
+
+- `io.github.wooram-yang:ggwave-core:0.1.0`
+- `io.github.wooram-yang:ggwave-kmp:0.1.0`
+
+### From this repository
 
 ```kotlin
-// build.gradle.kts
 kotlin {
     sourceSets.commonMain.dependencies {
         implementation(projects.ggwave)
     }
 }
 ```
+
+### From Maven Local, GitHub Packages, or Maven Central
+
+```kotlin
+repositories {
+    mavenCentral()
+    mavenLocal()
+    // maven { url = uri("https://maven.pkg.github.com/wooram-yang/ggwave-kmp") }
+}
+
+kotlin {
+    sourceSets.commonMain.dependencies {
+        implementation("io.github.wooram-yang:ggwave-kmp:0.1.0")
+    }
+}
+```
+
+Publish both modules first with `./gradlew :ggwave-core:publishToMavenLocal :ggwave:publishToMavenLocal`. Remote publishing is described in [PUBLISHING.md](PUBLISHING.md).
+
+### Codec-only usage
+
+Use `ggwave-core` when the application already owns the audio input/output pipeline:
+
+```kotlin
+import io.github.moreflow.ggwave.GgwaveCodec
+
+val encoder = GgwaveCodec.create()
+val pcm: ShortArray = encoder.encode("hello".encodeToByteArray())
+encoder.close()
+
+val decoder = GgwaveCodec.create()
+val payload: ByteArray? = decoder.decode(capturedPcm)
+decoder.close()
+```
+
+Each codec owns an independent native handle. A codec represents one decode stream and must not be called concurrently. Payloads may contain up to 140 bytes.
+
+### Microphone and speaker sessions
 
 ```kotlin
 import io.github.moreflow.ggwave.GgwaveSession
@@ -44,13 +91,13 @@ val session = GgwaveSession.create()
 session.send("hello")
 ```
 
-Android apps must declare and request `RECORD_AUDIO`. The sample does this in `androidApp`. The library does not show a permission dialog.
+The audio-session artifact declares `RECORD_AUDIO` through manifest merging. Android applications must still request the permission at runtime; the sample does this in `androidApp`. The library does not show a permission dialog.
 
 ```xml
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 ```
 
-Native artifacts are built by `:ggwave` (`libggwave` JNI for JVM/Android, `libggwave.a` for iOS cinterop). JVM loads the JNI library from resources; you do not need `-Djava.library.path`. Only one `GgwaveSession` can be active in a process at a time; call `close()` before creating another.
+Native artifacts are built by `:ggwave-core` (`libggwave` JNI for JVM/Android and target-specific `libggwave.a` archives for iOS cinterop). JVM loads the JNI library from resources; consumers do not need `-Djava.library.path`. The published JVM artifact is assembled with Windows x64, Linux x64/arm64, and macOS x64/arm64 libraries. Only one `GgwaveSession` can be active in a process at a time; independent codec-only instances are supported.
 
 ## How to use the sample app
 1. Press the receive button to get messages through the microphone

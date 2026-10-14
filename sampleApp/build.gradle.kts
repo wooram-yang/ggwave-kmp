@@ -34,11 +34,13 @@ kotlin {
         listOf(
             iosArm64(),
             iosSimulatorArm64(),
+            iosX64(),
         ).forEach { iosTarget ->
             iosTarget.binaries.framework {
                 baseName = "SampleApp"
                 isStatic = true
                 export(projects.ggwave)
+                transitiveExport = true
             }
         }
     }

@@ -7,6 +7,8 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import io.github.moreflow.ggwave.GgwaveConfig
+import io.github.moreflow.ggwave.GgwaveCodec
+import io.github.moreflow.ggwave.GgwaveCodecConfig
 import io.github.moreflow.ggwave.GgwaveException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +23,9 @@ import kotlin.math.max
 internal class AndroidGgwaveRuntime(
     private val config: GgwaveConfig,
 ) : GgwaveRuntime {
-    private val ggWave: GGWave = createGGWave()
+    private val codec = GgwaveCodec.create(
+        GgwaveCodecConfig(config.sampleRate, config.sampleRate),
+    )
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private var onReceivedMessage: (String) -> Unit = {}
@@ -32,10 +36,6 @@ internal class AndroidGgwaveRuntime(
     private var playbackJob: Job? = null
     private var audioRecord: AudioRecord? = null
     private var captureJob: Job? = null
-
-    init {
-        ggWave.init(config)
-    }
 
     override fun setListeners(
         onReceivedMessage: (String) -> Unit,
@@ -62,7 +62,7 @@ internal class AndroidGgwaveRuntime(
                 while (isActive) {
                     record.read(decodedDataArray, 0, decodedDataArray.size)
                     if (!isActive) break
-                    val payload = ggWave.decode(decodedDataArray) ?: continue
+                    val payload = codec.decode(decodedDataArray) ?: continue
                     val text = payload.toGgwavePayload()
                     if (text.isNotBlank()) {
                         onReceivedMessage(text)
@@ -93,7 +93,7 @@ internal class AndroidGgwaveRuntime(
 
     override fun startPlayback(message: String) {
         val encoded = try {
-            ggWave.encode(message, config.volume)
+            codec.encode(message.encodeToByteArray(), volume = config.volume)
         } catch (error: Throwable) {
             onPlayFailed(error)
             return
@@ -206,7 +206,7 @@ internal class AndroidGgwaveRuntime(
     override fun close() {
         stopCapturing()
         stopPlayback()
-        ggWave.close()
+        codec.close()
         scope.cancel()
     }
 

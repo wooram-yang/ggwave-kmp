@@ -52,5 +52,5 @@ dependencies {
 }
 
 tasks.named("preBuild") {
-    dependsOn(":ggwave:buildGGWaveAndroidLibrary")
+    dependsOn(":ggwave-core:buildGGWaveAndroidLibrary")
 }

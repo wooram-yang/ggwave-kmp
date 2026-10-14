@@ -1,6 +1,0 @@
-headers = ggwave.h
-staticLibraries = libggwave.a
-libraryPaths = libs/static
-noStringConversion = ggwave_decode
-
-linkerOpts.osx = -L/opt/homebrew/opt/llvm/lib/c++
