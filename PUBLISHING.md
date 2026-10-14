@@ -79,7 +79,6 @@ repository:
 mavenCentralUsername=<token-username>
 mavenCentralPassword=<token-password>
 signingInMemoryKey=<armored-private-key>
-signingInMemoryKeyId=<key-id>
 signingInMemoryKeyPassword=<key-password>
 ```
 
@@ -96,7 +95,6 @@ The GitHub Actions workflow expects the equivalent repository secrets:
 - `MAVEN_CENTRAL_USERNAME`
 - `MAVEN_CENTRAL_PASSWORD`
 - `SIGNING_IN_MEMORY_KEY`
-- `SIGNING_IN_MEMORY_KEY_ID`
 - `SIGNING_IN_MEMORY_KEY_PASSWORD`
 
 The Maven Central step is skipped when `MAVEN_CENTRAL_USERNAME` is absent.
