@@ -2,6 +2,12 @@ name: Publish
 
 on:
   workflow_dispatch:
+    inputs:
+      central_only:
+        description: Skip GitHub Packages and upload only to Maven Central
+        required: true
+        default: false
+        type: boolean
   release:
     types: [published]
 
@@ -77,14 +83,18 @@ jobs:
           test -f ggwave-core/prebuilt/jvm/native/macos-aarch64/libggwave.dylib
           test -f ggwave-core/prebuilt/jvm/native/macos-x86_64/libggwave.dylib
 
-      - name: Test and publish to GitHub Packages
+      - name: Test
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: ./gradlew :ggwave-core:jvmTest :ggwave:jvmTest --no-daemon
+
+      - name: Publish to GitHub Packages
+        if: github.event_name != 'workflow_dispatch' || inputs.central_only != true
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: |
-          ./gradlew :ggwave-core:jvmTest :ggwave:jvmTest --no-daemon
-          ./gradlew :ggwave-core:publishAllPublicationsToGitHubPackagesRepository :ggwave:publishAllPublicationsToGitHubPackagesRepository --no-daemon
+        run: ./gradlew :ggwave-core:publishAllPublicationsToGitHubPackagesRepository :ggwave:publishAllPublicationsToGitHubPackagesRepository --no-daemon
 
       - name: Upload to Maven Central
         if: env.CENTRAL_USERNAME != ''

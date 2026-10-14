@@ -101,6 +101,10 @@ The GitHub Actions workflow expects the equivalent repository secrets:
 
 The Maven Central step is skipped when `MAVEN_CENTRAL_USERNAME` is absent.
 
+For a Maven Central retry after GitHub Packages has already succeeded, run the
+`Publish` workflow manually with `central_only` enabled. This avoids attempting
+to overwrite the immutable GitHub Packages version.
+
 `publishToMavenCentral` uploads and validates a deployment but deliberately
 does not release it automatically. After the workflow succeeds, open
 [Central Portal deployments](https://central.sonatype.com/publishing/deployments),
