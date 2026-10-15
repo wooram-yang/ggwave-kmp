@@ -1,11 +1,20 @@
+import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.Sync
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.File
 import java.util.Properties
 
+abstract class AndroidJniLibsSync : Sync() {
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+}
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidMultiplatformLibrary)
-    alias(libs.plugins.mavenPublish)
+    id("ggwave.publishing")
 }
 
 val hostOs = System.getProperty("os.name").orEmpty()
@@ -14,10 +23,10 @@ val isWindows = hostOs.startsWith("Windows")
 val isLinux = hostOs.contains("Linux", ignoreCase = true)
 val hostArch = System.getProperty("os.arch").orEmpty()
 val hostOsFamily = hostOs.split(' ').first()
-val cmakeBuildDir = layout.projectDirectory.dir("cmake/$hostArch/$hostOsFamily")
-val jniDir = layout.projectDirectory.dir("libs/jni")
+val cmakeBuildDir = layout.buildDirectory.dir("native/desktop/$hostArch/$hostOsFamily")
 val nativeGgwaveDir = layout.projectDirectory.dir("native/ggwave")
 val generatedJniResources = layout.buildDirectory.dir("generated/jniResources")
+val generatedAndroidJniLibs = layout.buildDirectory.dir("generated/androidJniLibs")
 val nativeToolPath = (
     listOf("/opt/homebrew/bin", "/usr/local/bin")
         .filter { isMacOs && file(it).isDirectory } +
@@ -30,6 +39,15 @@ fun findNativeTool(name: String): String = if (isMacOs) {
 } else {
     name
 }
+fun compareVersionNames(left: String, right: String): Int {
+    val leftParts = left.split('.').map { it.toIntOrNull() ?: 0 }
+    val rightParts = right.split('.').map { it.toIntOrNull() ?: 0 }
+    repeat(maxOf(leftParts.size, rightParts.size)) { index ->
+        val comparison = (leftParts.getOrNull(index) ?: 0).compareTo(rightParts.getOrNull(index) ?: 0)
+        if (comparison != 0) return comparison
+    }
+    return 0
+}
 val cmakeExecutable = findNativeTool("cmake")
 val ninjaExecutable = findNativeTool("ninja")
 val jniResourceFolder = when {
@@ -38,6 +56,11 @@ val jniResourceFolder = when {
     isMacOs -> "macos-x86_64"
     hostArch.contains("aarch64") || hostArch.contains("arm") -> "linux-aarch64"
     else -> "linux-x86_64"
+}
+val jvmNativeLibraryName = when {
+    isWindows -> "libggwave.dll"
+    isMacOs -> "libggwave.dylib"
+    else -> "libggwave.so"
 }
 
 kotlin {
@@ -143,20 +166,28 @@ fun findAndroidNdk(): java.io.File? {
         return file(path).takeIf { it.isDirectory }
     }
     val sdk = properties.getProperty("sdk.dir") ?: return null
-    return file(sdk).resolve("ndk").listFiles()
-        ?.filter { it.isDirectory }
-        ?.maxByOrNull { it.name }
+    val ndkRoot = file(sdk).resolve("ndk")
+    val preferredVersion = providers.gradleProperty("GGWAVE_ANDROID_NDK_VERSION").orNull
+    if (preferredVersion != null) {
+        return ndkRoot.resolve(preferredVersion).takeIf { it.isDirectory }
+    }
+    return ndkRoot.listFiles()
+        ?.filter(File::isDirectory)
+        ?.maxWithOrNull { left, right -> compareVersionNames(left.name, right.name) }
 }
 
 if (isWindows || isMacOs || isLinux) {
     val configureGgwaveCmake by tasks.registering(Exec::class) {
+        inputs.dir(nativeGgwaveDir)
+        inputs.file(layout.projectDirectory.file("src/desktopMain/CMakeLists.txt"))
+        outputs.file(cmakeBuildDir.map { it.file("CMakeCache.txt") })
         workingDir = file("src/desktopMain")
         environment("PATH", nativeToolPath)
         val arguments = mutableListOf(
             cmakeExecutable, "-G", "Ninja",
             "-DCMAKE_MAKE_PROGRAM=$ninjaExecutable",
             "-DCMAKE_BUILD_TYPE=Release",
-            "-B", cmakeBuildDir.asFile.absolutePath,
+            "-B", cmakeBuildDir.get().asFile.absolutePath,
             "-S", ".",
         )
         if (isWindows) {
@@ -176,19 +207,16 @@ if (isWindows || isMacOs || isLinux) {
     }
     val buildGgwaveCmake by tasks.registering(Exec::class) {
         dependsOn(configureGgwaveCmake)
-        workingDir = cmakeBuildDir.asFile
+        inputs.dir(nativeGgwaveDir)
+        inputs.file(cmakeBuildDir.map { it.file("CMakeCache.txt") })
+        outputs.file(cmakeBuildDir.map { it.file(jvmNativeLibraryName) })
+        workingDir = cmakeBuildDir.get().asFile
         environment("PATH", nativeToolPath)
         commandLine(cmakeExecutable, "--build", ".")
     }
-    val copyGgwaveJvmLibrary by tasks.registering(Copy::class) {
+    val copyJniIntoResources by tasks.registering(Copy::class) {
         dependsOn(buildGgwaveCmake)
         from(cmakeBuildDir)
-        include("libggwave.dll", "libggwave.dylib", "libggwave.so")
-        into(jniDir)
-    }
-    val copyJniIntoResources by tasks.registering(Copy::class) {
-        dependsOn(copyGgwaveJvmLibrary)
-        from(jniDir)
         include("*.dll", "*.dylib", "*.so")
         into(generatedJniResources.map { it.dir("native/$jniResourceFolder") })
     }
@@ -196,125 +224,70 @@ if (isWindows || isMacOs || isLinux) {
         group = "build"
         dependsOn(copyJniIntoResources)
     }
-    tasks.configureEach {
-        if (
-            name.contains("Jvm", ignoreCase = true) &&
-            !name.startsWith("buildGGWave") &&
-            !name.startsWith("copyGgwave")
-        ) {
-            dependsOn(copyJniIntoResources)
-        }
+    tasks.named("jvmProcessResources") {
+        dependsOn(copyJniIntoResources)
     }
 }
 
 val androidAbis = listOf("armeabi-v7a", "arm64-v8a", "x86_64")
-val androidJniLibsDir = layout.projectDirectory.dir("src/androidMain/jniLibs")
+val androidNdk = findAndroidNdk()
+val androidNdkPath = androidNdk?.absolutePath
+    ?: "ANDROID_NDK_${providers.gradleProperty("GGWAVE_ANDROID_NDK_VERSION").orNull.orEmpty()}_NOT_FOUND"
+val androidNativeBuilds = androidAbis.associateWith { abi ->
+    val taskSuffix = abi.split('-', '_').joinToString("") { segment ->
+        segment.replaceFirstChar { it.uppercase() }
+    }
+    val buildDirectory = layout.buildDirectory.dir("native/android/$abi")
+    val configure = tasks.register<Exec>("configureGgwaveAndroid$taskSuffix") {
+        inputs.dir(layout.projectDirectory.dir("native"))
+        inputs.file(layout.projectDirectory.file("src/androidMain/CMakeLists.txt"))
+        outputs.file(buildDirectory.map { it.file("CMakeCache.txt") })
+        environment("PATH", nativeToolPath)
+        commandLine(
+            cmakeExecutable,
+            "-G", "Ninja",
+            "-DCMAKE_MAKE_PROGRAM=$ninjaExecutable",
+            "-DCMAKE_TOOLCHAIN_FILE=$androidNdkPath/build/cmake/android.toolchain.cmake",
+            "-DANDROID_ABI=$abi",
+            "-DANDROID_PLATFORM=android-24",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-B", buildDirectory.get().asFile.absolutePath,
+            "-S", file("src/androidMain").absolutePath,
+        )
+    }
+    tasks.register<Exec>("buildGgwaveAndroid$taskSuffix") {
+        dependsOn(configure)
+        inputs.dir(layout.projectDirectory.dir("native"))
+        inputs.file(buildDirectory.map { it.file("CMakeCache.txt") })
+        outputs.file(buildDirectory.map { it.file("libggwave.so") })
+        workingDir(buildDirectory)
+        environment("PATH", nativeToolPath)
+        commandLine(cmakeExecutable, "--build", ".")
+    } to buildDirectory
+}
+
+val syncGgwaveAndroidJniLibs = tasks.register<AndroidJniLibsSync>("syncGgwaveAndroidJniLibs") {
+    outputDirectory.set(generatedAndroidJniLibs)
+    into(outputDirectory)
+    androidNativeBuilds.forEach { (abi, build) ->
+        val (buildTask, buildDirectory) = build
+        dependsOn(buildTask)
+        from(buildDirectory.map { it.file("libggwave.so") }) {
+            into(abi)
+        }
+    }
+}
 
 tasks.register("buildGGWaveAndroidLibrary") {
     group = "build"
-    inputs.dir(layout.projectDirectory.dir("native"))
-    inputs.file(layout.projectDirectory.file("src/androidMain/CMakeLists.txt"))
-    outputs.dir(androidJniLibsDir)
-    doLast {
-        val ndk = findAndroidNdk()
-            ?: throw GradleException("Android NDK is required to build ggwave-core Android artifacts")
-        fun run(vararg arguments: String) {
-            val process = ProcessBuilder(*arguments)
-            process.environment()["PATH"] = nativeToolPath
-            val result = process.inheritIO().start().waitFor()
-            if (result != 0) throw GradleException("Command failed ($result): ${arguments.joinToString(" ")}")
-        }
-        androidAbis.forEach { abi ->
-            val buildDirectory = layout.projectDirectory.dir("cmake/android/$abi").asFile
-            buildDirectory.mkdirs()
-            run(
-                cmakeExecutable,
-                "-G", "Ninja",
-                "-DCMAKE_MAKE_PROGRAM=$ninjaExecutable",
-                "-DCMAKE_TOOLCHAIN_FILE=${ndk.absolutePath}/build/cmake/android.toolchain.cmake",
-                "-DANDROID_ABI=$abi",
-                "-DANDROID_PLATFORM=android-24",
-                "-DCMAKE_BUILD_TYPE=Release",
-                "-B", buildDirectory.absolutePath,
-                "-S", file("src/androidMain").absolutePath,
-            )
-            run(cmakeExecutable, "--build", buildDirectory.absolutePath)
-            val library = listOf(
-                file("$buildDirectory/libggwave.so"),
-                file("$buildDirectory/lib/libggwave.so"),
-            ).firstOrNull { it.exists() }
-                ?: throw GradleException("libggwave.so was not produced for ABI $abi")
-            val destination = androidJniLibsDir.dir(abi).asFile
-            destination.mkdirs()
-            library.copyTo(destination.resolve(library.name), overwrite = true)
-        }
-    }
+    dependsOn(syncGgwaveAndroidJniLibs)
 }
 
-tasks.configureEach {
-    if (
-        name.contains("Android", ignoreCase = true) &&
-        name != "buildGGWaveAndroidLibrary" &&
-        (
-            name.contains("Jni", ignoreCase = true) ||
-                name.contains("Aar", ignoreCase = true) ||
-                name.startsWith("merge") ||
-                name.startsWith("package") ||
-                name.startsWith("publishAndroid")
-            )
-    ) {
-        dependsOn("buildGGWaveAndroidLibrary")
-    }
-}
-
-mavenPublishing {
-    coordinates(
-        providers.gradleProperty("LIBRARY_GROUP").get(),
-        "ggwave-core",
-        providers.gradleProperty("LIBRARY_VERSION").get(),
-    )
-    publishToMavenCentral()
-    if (providers.gradleProperty("signingInMemoryKey").orNull != null) {
-        signAllPublications()
-    }
-    pom {
-        name.set("ggwave-core")
-        description.set("Kotlin Multiplatform bindings for the ggwave audio data codec.")
-        inceptionYear.set("2024")
-        url.set("https://github.com/wooram-yang/ggwave-kmp")
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-                distribution.set("repo")
-            }
-        }
-        developers {
-            developer {
-                id.set("wooram-yang")
-                name.set("Wooram Yang")
-                url.set("https://github.com/wooram-yang")
-            }
-        }
-        scm {
-            url.set("https://github.com/wooram-yang/ggwave-kmp")
-            connection.set("scm:git:git://github.com/wooram-yang/ggwave-kmp.git")
-            developerConnection.set("scm:git:ssh://git@github.com/wooram-yang/ggwave-kmp.git")
-        }
-    }
-}
-
-publishing.repositories.maven {
-    name = "GitHubPackages"
-    url = uri("https://maven.pkg.github.com/wooram-yang/ggwave-kmp")
-    credentials {
-        username = providers.environmentVariable("GITHUB_ACTOR")
-            .orElse(providers.gradleProperty("gpr.user"))
-            .orElse("wooram-yang")
-            .get()
-        password = providers.environmentVariable("GITHUB_TOKEN")
-            .orElse(providers.gradleProperty("gpr.key"))
-            .orElse("")
-            .get()
+extensions.configure<KotlinMultiplatformAndroidComponentsExtension>("androidComponents") {
+    onVariants(selector().all()) { variant ->
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(
+            syncGgwaveAndroidJniLibs,
+            AndroidJniLibsSync::outputDirectory,
+        )
     }
 }
