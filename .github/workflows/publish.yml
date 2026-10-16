@@ -66,7 +66,7 @@ jobs:
       - uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: 29.0.14206865
+          ndk-version: r29
           add-to-path: false
 
       - uses: actions/download-artifact@v4
