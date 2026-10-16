@@ -3,8 +3,8 @@
 Published modules:
 
 ```text
-io.github.wooram-yang:ggwave-core:0.2.0
-io.github.wooram-yang:ggwave-kmp:0.2.0
+io.github.wooram-yang:ggwave-core:0.2.1
+io.github.wooram-yang:ggwave-kmp:0.2.1
 ```
 
 `ggwave-core` contains the codec API and native bindings. `ggwave-kmp` contains
