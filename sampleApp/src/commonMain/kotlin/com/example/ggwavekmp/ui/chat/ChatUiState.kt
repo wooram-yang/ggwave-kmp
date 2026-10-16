@@ -12,6 +12,8 @@ data class ChatUiState(
     val inputText: String = "",
     val isSending: Boolean = false,
     val isCapturing: Boolean = false,
+    val captureError: String? = null,
+    val captureLevel: Float = 0f,
 ) {
     val canSend: Boolean
         get() = inputText.isNotBlank() && !isSending

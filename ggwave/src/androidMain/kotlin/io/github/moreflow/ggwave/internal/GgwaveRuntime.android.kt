@@ -45,6 +45,7 @@ internal class AndroidGgwaveRuntime(
 
     override fun setListeners(
         onReceivedMessage: (String) -> Unit,
+        onCaptureLevelChanged: (Float) -> Unit,
         onCaptureFailed: (Throwable) -> Unit,
         onPlayEnded: () -> Unit,
         onPlayFailed: (Throwable) -> Unit,

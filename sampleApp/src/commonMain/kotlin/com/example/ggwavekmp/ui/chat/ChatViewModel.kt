@@ -24,6 +24,21 @@ class ChatViewModel(
                 onMessageReceived(message)
             }
         }
+        viewModelScope.launch {
+            session.isCapturing.collect { isCapturing ->
+                _uiState.update { it.copy(isCapturing = isCapturing) }
+            }
+        }
+        viewModelScope.launch {
+            session.captureErrors.collect { error ->
+                _uiState.update { it.copy(captureError = error.message ?: "Microphone capture failed") }
+            }
+        }
+        viewModelScope.launch {
+            session.captureLevel.collect { level ->
+                _uiState.update { it.copy(captureLevel = level) }
+            }
+        }
     }
 
     fun onInputChange(value: String) {
@@ -75,11 +90,14 @@ class ChatViewModel(
     }
 
     private fun startCapture() {
+        _uiState.update { it.copy(captureError = null) }
         try {
             session.startCapture()
             _uiState.update { it.copy(isCapturing = true) }
-        } catch (_: Exception) {
-            _uiState.update { it.copy(isCapturing = false) }
+        } catch (error: Exception) {
+            _uiState.update {
+                it.copy(isCapturing = false, captureError = error.message ?: "Microphone capture failed")
+            }
         }
     }
 

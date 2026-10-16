@@ -71,15 +71,31 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            ChatInputBar(
-                inputText = uiState.inputText,
-                isSending = uiState.isSending,
-                isCapturing = uiState.isCapturing,
-                canSend = uiState.canSend,
-                onInputChange = onInputChange,
-                onSendClick = onSendClick,
-                onToggleCapture = onToggleCapture,
-            )
+            Column {
+                if (uiState.isCapturing) {
+                    Text(
+                        text = "Listening · input ${(uiState.captureLevel * 100).toInt()}%",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                }
+                uiState.captureError?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                }
+                ChatInputBar(
+                    inputText = uiState.inputText,
+                    isSending = uiState.isSending,
+                    isCapturing = uiState.isCapturing,
+                    canSend = uiState.canSend,
+                    onInputChange = onInputChange,
+                    onSendClick = onSendClick,
+                    onToggleCapture = onToggleCapture,
+                )
+            }
         },
     ) { innerPadding ->
         LazyColumn(

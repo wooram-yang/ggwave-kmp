@@ -21,6 +21,8 @@ class GgwaveSession internal constructor(
 ) {
     private val sendMutex = Mutex()
     private val _receivedMessages = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    private val _captureErrors = MutableSharedFlow<Throwable>(extraBufferCapacity = 1)
+    private val _captureLevel = MutableStateFlow(0f)
     private val _isCapturing = MutableStateFlow(false)
     private val _isPlaying = MutableStateFlow(false)
 
@@ -28,6 +30,8 @@ class GgwaveSession internal constructor(
     private var closed = false
 
     val receivedMessages: SharedFlow<String> = _receivedMessages.asSharedFlow()
+    val captureErrors: SharedFlow<Throwable> = _captureErrors.asSharedFlow()
+    val captureLevel: StateFlow<Float> = _captureLevel.asStateFlow()
     val isCapturing: StateFlow<Boolean> = _isCapturing.asStateFlow()
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
@@ -38,8 +42,13 @@ class GgwaveSession internal constructor(
                     _receivedMessages.tryEmit(message)
                 }
             },
-            onCaptureFailed = {
+            onCaptureLevelChanged = { level ->
+                _captureLevel.value = level
+            },
+            onCaptureFailed = { error ->
                 _isCapturing.value = false
+                _captureLevel.value = 0f
+                _captureErrors.tryEmit(error)
             },
             onPlayEnded = {
                 playEnded?.complete(Unit)
@@ -66,6 +75,7 @@ class GgwaveSession internal constructor(
         if (!_isCapturing.value) return
         runtime.stopCapturing()
         _isCapturing.value = false
+        _captureLevel.value = 0f
     }
 
     suspend fun send(message: String) {
@@ -98,6 +108,7 @@ class GgwaveSession internal constructor(
         if (_isCapturing.value) {
             runtime.stopCapturing()
             _isCapturing.value = false
+            _captureLevel.value = 0f
         }
         playEnded?.cancel()
         playEnded = null

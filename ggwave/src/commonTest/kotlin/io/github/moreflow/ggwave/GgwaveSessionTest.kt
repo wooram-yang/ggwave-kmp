@@ -9,6 +9,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -95,10 +97,13 @@ class GgwaveSessionTest {
         val runtime = FakeGgwaveRuntime()
         val session = GgwaveSession(runtime)
         session.startCapture()
+        val error = async { session.captureErrors.first() }
+        runCurrent()
 
         runtime.failCapture()
 
         assertFalse(session.isCapturing.value)
+        assertEquals("capture failed", error.await().message)
     }
 
     @Test
@@ -188,6 +193,7 @@ private class FakeGgwaveRuntime(
 
     override fun setListeners(
         onReceivedMessage: (String) -> Unit,
+        onCaptureLevelChanged: (Float) -> Unit,
         onCaptureFailed: (Throwable) -> Unit,
         onPlayEnded: () -> Unit,
         onPlayFailed: (Throwable) -> Unit,
