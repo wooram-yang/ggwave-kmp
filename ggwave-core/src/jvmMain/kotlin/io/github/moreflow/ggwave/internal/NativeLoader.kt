@@ -16,18 +16,23 @@ internal object NativeLoader {
 
             val os = System.getProperty("os.name").orEmpty().lowercase()
             val arch = System.getProperty("os.arch").orEmpty().lowercase()
+            val isMac = os.contains("mac") || os.contains("darwin")
+            val isWindows = os.contains("win")
+            val isLinux = os.contains("linux")
+            val isArm64 = arch == "aarch64" || arch == "arm64"
+            val isX64 = arch == "x86_64" || arch == "amd64"
+            // Must match jniResourceFolder in ggwave-core/build.gradle.kts.
             val folder = when {
-                os.contains("win") && arch.contains("64") -> "windows-x86_64"
-                (os.contains("mac") || os.contains("darwin")) &&
-                    (arch.contains("aarch64") || arch.contains("arm64")) -> "macos-aarch64"
-                os.contains("mac") || os.contains("darwin") -> "macos-x86_64"
-                (arch.contains("aarch64") || arch.contains("arm64")) -> "linux-aarch64"
-                arch.contains("64") -> "linux-x86_64"
+                isMac && isArm64 -> "macos-aarch64"
+                isMac && isX64 -> "macos-x86_64"
+                isWindows && isX64 -> "windows-x86_64"
+                isLinux && isArm64 -> "linux-aarch64"
+                isLinux && isX64 -> "linux-x86_64"
                 else -> throw GgwaveException("Unsupported JVM platform: os=$os, arch=$arch")
             }
             val libraryName = when {
-                os.contains("win") -> "libggwave.dll"
-                os.contains("mac") || os.contains("darwin") -> "libggwave.dylib"
+                isWindows -> "libggwave.dll"
+                isMac -> "libggwave.dylib"
                 else -> "libggwave.so"
             }
             val resourcePath = "/native/$folder/$libraryName"

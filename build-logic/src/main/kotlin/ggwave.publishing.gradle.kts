@@ -2,16 +2,12 @@ plugins {
     id("com.vanniktech.maven.publish")
 }
 
-val artifactId = when (project.name) {
-    "ggwave" -> "ggwave-kmp"
-    "ggwave-core" -> "ggwave-core"
-    else -> error("Unsupported publishing project: ${project.path}")
-}
-val artifactDescription = when (project.name) {
-    "ggwave" -> "Kotlin Multiplatform audio sessions for sending and receiving data with ggwave."
-    "ggwave-core" -> "Kotlin Multiplatform bindings for the ggwave audio data codec."
-    else -> error("Unsupported publishing project: ${project.path}")
-}
+// Each published module declares these in its own gradle.properties, which only project properties see.
+fun requireModuleProperty(name: String): String =
+    findProperty(name)?.toString() ?: error("${project.path} must define $name in its gradle.properties")
+
+val artifactId = requireModuleProperty("GGWAVE_ARTIFACT_ID")
+val artifactDescription = requireModuleProperty("GGWAVE_ARTIFACT_DESCRIPTION")
 
 mavenPublishing {
     coordinates(
