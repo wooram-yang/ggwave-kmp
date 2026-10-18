@@ -133,7 +133,9 @@ internal class AndroidGgwaveRuntime(
     @SuppressLint("MissingPermission")
     private fun createAudioRecord(bufferSize: Int): AudioRecord {
         return AudioRecord(
-            MediaRecorder.AudioSource.DEFAULT,
+            // The CDD requires noise suppression and AGC to be off for this source; the default
+            // microphone path may apply voice processing that attenuates ultrasound protocols.
+            MediaRecorder.AudioSource.VOICE_RECOGNITION,
             config.sampleRate,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,
