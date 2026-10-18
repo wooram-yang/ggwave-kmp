@@ -19,6 +19,7 @@ fun App(
             uiState = uiState,
             onInputChange = viewModel::onInputChange,
             onSendClick = viewModel::onSendClick,
+            onProtocolChange = viewModel::onProtocolChange,
             onToggleCapture = viewModel::onToggleCapture,
         )
     }

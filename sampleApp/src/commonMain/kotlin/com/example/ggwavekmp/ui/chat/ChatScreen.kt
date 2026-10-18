@@ -18,10 +18,15 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -30,6 +35,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import ggwavekmp.sampleapp.generated.resources.Res
 import ggwavekmp.sampleapp.generated.resources.app_name
+import io.github.moreflow.ggwave.GgwaveProtocol
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +55,7 @@ fun ChatScreen(
     uiState: ChatUiState,
     onInputChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onProtocolChange: (GgwaveProtocol) -> Unit,
     onToggleCapture: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -86,6 +97,11 @@ fun ChatScreen(
                         modifier = Modifier.padding(horizontal = 20.dp),
                     )
                 }
+                ProtocolSelector(
+                    protocol = uiState.protocol,
+                    enabled = !uiState.isSending,
+                    onProtocolChange = onProtocolChange,
+                )
                 ChatInputBar(
                     inputText = uiState.inputText,
                     isSending = uiState.isSending,
@@ -139,6 +155,61 @@ private fun ChatItem(message: ChatMessage) {
             Text(text = message.text, color = Color.White)
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProtocolSelector(
+    protocol: GgwaveProtocol,
+    enabled: Boolean,
+    onProtocolChange: (GgwaveProtocol) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (enabled) expanded = it },
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+    ) {
+        OutlinedTextField(
+            value = protocol.label(),
+            onValueChange = {},
+            readOnly = true,
+            enabled = enabled,
+            singleLine = true,
+            label = { Text("Send protocol") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            GgwaveProtocol.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label()) },
+                    onClick = {
+                        onProtocolChange(option)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun GgwaveProtocol.label(): String = when (this) {
+    GgwaveProtocol.AudibleNormal -> "Audible · Normal"
+    GgwaveProtocol.AudibleFast -> "Audible · Fast"
+    GgwaveProtocol.AudibleFastest -> "Audible · Fastest"
+    GgwaveProtocol.UltrasoundNormal -> "Ultrasound · Normal"
+    GgwaveProtocol.UltrasoundFast -> "Ultrasound · Fast"
+    GgwaveProtocol.UltrasoundFastest -> "Ultrasound · Fastest"
+    GgwaveProtocol.DualToneNormal -> "Dual-tone · Normal"
+    GgwaveProtocol.DualToneFast -> "Dual-tone · Fast"
+    GgwaveProtocol.DualToneFastest -> "Dual-tone · Fastest"
 }
 
 @Composable

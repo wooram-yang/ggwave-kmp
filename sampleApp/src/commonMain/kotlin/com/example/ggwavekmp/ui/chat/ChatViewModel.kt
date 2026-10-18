@@ -2,6 +2,7 @@ package com.example.ggwavekmp.ui.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.moreflow.ggwave.GgwaveProtocol
 import io.github.moreflow.ggwave.GgwaveSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +47,10 @@ class ChatViewModel(
         _uiState.update { it.copy(inputText = value) }
     }
 
+    fun onProtocolChange(protocol: GgwaveProtocol) {
+        _uiState.update { it.copy(protocol = protocol) }
+    }
+
     fun onSendClick() {
         val state = _uiState.value
         val message = state.inputText.trim()
@@ -72,7 +77,7 @@ class ChatViewModel(
 
         viewModelScope.launch {
             try {
-                session.send(message)
+                session.send(message, state.protocol)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
