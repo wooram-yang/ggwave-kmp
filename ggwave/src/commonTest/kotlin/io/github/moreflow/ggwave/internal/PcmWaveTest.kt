@@ -16,6 +16,14 @@ class PcmWaveTest {
     }
 
     @Test
+    fun convertsLittleEndianBytesToSamples() {
+        val bytes = byteArrayOf(0x34, 0x12, 0xFE.toByte(), 0xFF.toByte(), 0x7F)
+
+        assertContentEquals(shortArrayOf(0x1234, -2), bytes.toLittleEndianShortArray(byteCount = 4))
+        assertContentEquals(shortArrayOf(0x1234, -2), bytes.toLittleEndianShortArray())
+    }
+
+    @Test
     fun createsValidPcm16MonoWaveHeader() {
         val dataLength = 1_024
         val header = createPcm16MonoWaveHeader(dataLength, sampleRate = 48_000)

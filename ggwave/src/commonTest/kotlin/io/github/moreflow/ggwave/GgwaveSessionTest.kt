@@ -177,9 +177,7 @@ private class FakeGgwaveRuntime(
     var lastMessage: String? = null
     var closed = false
     var playbackStopped = false
-    private var onCaptureFailed: (Throwable) -> Unit = {}
-    private var onPlayEnded: () -> Unit = {}
-    private var onPlayFailed: (Throwable) -> Unit = {}
+    private var listener: GgwaveRuntime.Listener = object : GgwaveRuntime.Listener {}
 
     override fun startCapturing() {
         if (failCaptureOnStart) {
@@ -195,9 +193,9 @@ private class FakeGgwaveRuntime(
     override fun startPlayback(message: String) {
         lastMessage = message
         if (failPlayback) {
-            onPlayFailed(GgwaveException("encode failed"))
+            listener.onPlayFailed(GgwaveException("encode failed"))
         } else if (completePlaybackImmediately) {
-            onPlayEnded()
+            listener.onPlayEnded()
         }
     }
 
@@ -205,16 +203,8 @@ private class FakeGgwaveRuntime(
         playbackStopped = true
     }
 
-    override fun setListeners(
-        onReceivedMessage: (String) -> Unit,
-        onCaptureLevelChanged: (Float) -> Unit,
-        onCaptureFailed: (Throwable) -> Unit,
-        onPlayEnded: () -> Unit,
-        onPlayFailed: (Throwable) -> Unit,
-    ) {
-        this.onCaptureFailed = onCaptureFailed
-        this.onPlayEnded = onPlayEnded
-        this.onPlayFailed = onPlayFailed
+    override fun setListener(listener: GgwaveRuntime.Listener) {
+        this.listener = listener
     }
 
     override fun close() {
@@ -225,11 +215,11 @@ private class FakeGgwaveRuntime(
     }
 
     fun finishPlayback() {
-        onPlayEnded()
+        listener.onPlayEnded()
     }
 
     fun failCapture() {
         capturing = false
-        onCaptureFailed(GgwaveException("capture failed"))
+        listener.onCaptureFailed(GgwaveException("capture failed"))
     }
 }

@@ -6,23 +6,39 @@ import io.github.moreflow.ggwave.GgwaveProtocol
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotSame
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GgwaveRuntimeCodecsTest {
     @Test
-    fun createsIndependentEncoderAndDecoderAndClosesBoth() {
+    fun routesEncodeAndDecodeToSeparateCodecsAndClosesBoth() {
         val createdCodecs = mutableListOf<FakeCodec>()
         val codecs = GgwaveRuntimeCodecs.create(GgwaveCodecConfig()) {
-            FakeCodec().also(createdCodecs::add)
+            FakeCodec(decoded = "hello".encodeToByteArray()).also(createdCodecs::add)
         }
+        val (encoder, decoder) = createdCodecs
 
-        assertEquals(2, createdCodecs.size)
-        assertNotSame(codecs.encoder, codecs.decoder)
+        codecs.encode("hi", volume = 30)
+        val decoded = codecs.decode(ShortArray(4))
+
+        assertEquals(listOf("hi"), encoder.encodedPayloads)
+        assertEquals(30, encoder.lastVolume)
+        assertEquals(0, encoder.decodeCount)
+        assertEquals(1, decoder.decodeCount)
+        assertTrue(decoder.encodedPayloads.isEmpty())
+        assertEquals("hello", decoded)
 
         codecs.close()
 
         assertTrue(createdCodecs.all(FakeCodec::closed))
+    }
+
+    @Test
+    fun decodeReturnsNullWhenNoMessageIsComplete() {
+        val codecs = GgwaveRuntimeCodecs.create(GgwaveCodecConfig()) { FakeCodec(decoded = null) }
+
+        assertNull(codecs.decode(ShortArray(4)))
+        codecs.close()
     }
 
     @Test
@@ -41,13 +57,24 @@ class GgwaveRuntimeCodecsTest {
     }
 }
 
-private class FakeCodec : GgwaveCodec {
+internal class FakeCodec(
+    private val decoded: ByteArray? = null,
+) : GgwaveCodec {
     var closed = false
+    var decodeCount = 0
+    var lastVolume: Int? = null
+    val encodedPayloads = mutableListOf<String>()
 
-    override fun encode(payload: ByteArray, protocol: GgwaveProtocol, volume: Int): ShortArray =
-        ShortArray(0)
+    override fun encode(payload: ByteArray, protocol: GgwaveProtocol, volume: Int): ShortArray {
+        encodedPayloads += payload.decodeToString()
+        lastVolume = volume
+        return ShortArray(1)
+    }
 
-    override fun decode(samples: ShortArray): ByteArray? = null
+    override fun decode(samples: ShortArray): ByteArray? {
+        decodeCount += 1
+        return decoded
+    }
 
     override fun close() {
         closed = true

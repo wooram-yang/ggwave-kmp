@@ -10,6 +10,14 @@ internal fun ShortArray.toLittleEndianByteArray(): ByteArray {
     return result
 }
 
+internal fun ByteArray.toLittleEndianShortArray(byteCount: Int = size): ShortArray =
+    ShortArray(byteCount / Short.SIZE_BYTES) { index ->
+        val offset = index * Short.SIZE_BYTES
+        val low = this[offset].toInt() and 0xFF
+        val high = this[offset + 1].toInt() shl 8
+        (low or high).toShort()
+    }
+
 internal fun createPcm16MonoWaveHeader(
     dataLength: Int,
     sampleRate: Int,

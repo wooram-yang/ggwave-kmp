@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -11,6 +12,16 @@ val isMacOs = System.getProperty("os.name").orEmpty().startsWith("Mac")
 kotlin {
     jvmToolchain(21)
     jvm()
+
+    // jvm and android share java.util.concurrent based helpers in jvmSharedMain.
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jvmShared") {
+                withJvm()
+                withCompilations { it.platformType == KotlinPlatformType.androidJvm }
+            }
+        }
+    }
 
     android {
         namespace = "io.github.moreflow.ggwave"

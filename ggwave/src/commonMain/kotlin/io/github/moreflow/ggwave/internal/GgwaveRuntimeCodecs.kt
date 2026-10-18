@@ -3,16 +3,33 @@ package io.github.moreflow.ggwave.internal
 import io.github.moreflow.ggwave.GgwaveCodec
 import io.github.moreflow.ggwave.GgwaveCodecConfig
 
-/** Keeps the stateful encode and decode streams isolated from each other. */
+/**
+ * Keeps the stateful encode and decode streams isolated from each other.
+ *
+ * Each stream has its own lock so playback and capture can run concurrently,
+ * while [close] never frees a native codec that is still in use.
+ */
 internal class GgwaveRuntimeCodecs private constructor(
-    val encoder: GgwaveCodec,
-    val decoder: GgwaveCodec,
+    private val encoder: GgwaveCodec,
+    private val decoder: GgwaveCodec,
 ) : AutoCloseable {
+    private val encoderLock = RuntimeLock()
+    private val decoderLock = RuntimeLock()
+
+    fun encode(message: String, volume: Int): ShortArray = encoderLock.withLock {
+        encoder.encode(message.encodeToByteArray(), volume = volume)
+    }
+
+    /** Returns the decoded message, or null when [samples] did not complete one. */
+    fun decode(samples: ShortArray): String? = decoderLock.withLock {
+        decoder.decode(samples)
+    }?.decodeToString()
+
     override fun close() {
         try {
-            encoder.close()
+            encoderLock.withLock { encoder.close() }
         } finally {
-            decoder.close()
+            decoderLock.withLock { decoder.close() }
         }
     }
 

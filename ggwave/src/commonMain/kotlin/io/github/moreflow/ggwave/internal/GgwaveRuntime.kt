@@ -7,14 +7,16 @@ internal interface GgwaveRuntime {
     fun stopCapturing()
     fun startPlayback(message: String)
     fun stopPlayback()
-    fun setListeners(
-        onReceivedMessage: (String) -> Unit,
-        onCaptureLevelChanged: (Float) -> Unit,
-        onCaptureFailed: (Throwable) -> Unit,
-        onPlayEnded: () -> Unit,
-        onPlayFailed: (Throwable) -> Unit,
-    )
+    fun setListener(listener: Listener)
     fun close()
+
+    interface Listener {
+        fun onReceivedMessage(message: String) {}
+        fun onCaptureLevelChanged(level: Float) {}
+        fun onCaptureFailed(error: Throwable) {}
+        fun onPlayEnded() {}
+        fun onPlayFailed(error: Throwable) {}
+    }
 }
 
 internal expect fun createGgwaveRuntime(config: GgwaveConfig): GgwaveRuntime

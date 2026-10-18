@@ -36,25 +36,31 @@ class GgwaveSession internal constructor(
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
     init {
-        runtime.setListeners(
-            onReceivedMessage = { message ->
-                if (message.isNotBlank()) {
-                    _receivedMessages.tryEmit(message)
+        runtime.setListener(
+            object : GgwaveRuntime.Listener {
+                override fun onReceivedMessage(message: String) {
+                    if (message.isNotBlank()) {
+                        _receivedMessages.tryEmit(message)
+                    }
                 }
-            },
-            onCaptureLevelChanged = { level ->
-                _captureLevel.value = level
-            },
-            onCaptureFailed = { error ->
-                _isCapturing.value = false
-                _captureLevel.value = 0f
-                _captureErrors.tryEmit(error)
-            },
-            onPlayEnded = {
-                playEnded?.complete(Unit)
-            },
-            onPlayFailed = { error ->
-                playEnded?.completeExceptionally(error)
+
+                override fun onCaptureLevelChanged(level: Float) {
+                    _captureLevel.value = level
+                }
+
+                override fun onCaptureFailed(error: Throwable) {
+                    _isCapturing.value = false
+                    _captureLevel.value = 0f
+                    _captureErrors.tryEmit(error)
+                }
+
+                override fun onPlayEnded() {
+                    playEnded?.complete(Unit)
+                }
+
+                override fun onPlayFailed(error: Throwable) {
+                    playEnded?.completeExceptionally(error)
+                }
             },
         )
     }

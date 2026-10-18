@@ -19,14 +19,16 @@ class JvmGgwaveRuntimeTest {
         val playbackEnded = CountDownLatch(1)
         val playbackFailed = AtomicBoolean(false)
         val runtime = JvmGgwaveRuntime(GgwaveConfig(), clipFactory = { fakeClip.clip })
-        runtime.setListeners(
-            onReceivedMessage = {},
-            onCaptureLevelChanged = {},
-            onCaptureFailed = {},
-            onPlayEnded = { playbackEnded.countDown() },
-            onPlayFailed = {
-                playbackFailed.set(true)
-                playbackEnded.countDown()
+        runtime.setListener(
+            object : GgwaveRuntime.Listener {
+                override fun onPlayEnded() {
+                    playbackEnded.countDown()
+                }
+
+                override fun onPlayFailed(error: Throwable) {
+                    playbackFailed.set(true)
+                    playbackEnded.countDown()
+                }
             },
         )
 

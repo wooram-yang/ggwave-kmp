@@ -7,54 +7,16 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import io.github.moreflow.ggwave.GgwaveConfig
-import io.github.moreflow.ggwave.GgwaveCodecConfig
 import io.github.moreflow.ggwave.GgwaveException
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlin.math.max
 
 internal class AndroidGgwaveRuntime(
-    private val config: GgwaveConfig,
-) : GgwaveRuntime {
-    private val codecs = GgwaveRuntimeCodecs.create(
-        GgwaveCodecConfig(config.sampleRate, config.sampleRate),
-    )
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val resourceLock = Any()
-    private val encoderLock = Any()
-    private val decoderLock = Any()
-
-    private var onReceivedMessage: (String) -> Unit = {}
-    private var onCaptureFailed: (Throwable) -> Unit = {}
-    private var onPlayEnded: () -> Unit = {}
-    private var onPlayFailed: (Throwable) -> Unit = {}
-
-    private var playbackTrack: AudioTrack? = null
-    private var playbackJob: Job? = null
-    private var audioRecord: AudioRecord? = null
-    private var captureJob: Job? = null
-
-    override fun setListeners(
-        onReceivedMessage: (String) -> Unit,
-        onCaptureLevelChanged: (Float) -> Unit,
-        onCaptureFailed: (Throwable) -> Unit,
-        onPlayEnded: () -> Unit,
-        onPlayFailed: (Throwable) -> Unit,
-    ) {
-        this.onReceivedMessage = onReceivedMessage
-        this.onCaptureFailed = onCaptureFailed
-        this.onPlayEnded = onPlayEnded
-        this.onPlayFailed = onPlayFailed
-    }
+    config: GgwaveConfig,
+) : BaseGgwaveRuntime(config) {
+    private val captureStream = ActiveStream(::releaseAudioRecord)
+    private val playbackStream = ActiveStream(::releasePlaybackTrack)
 
     override fun startCapturing() {
         stopCapturing()
@@ -64,168 +26,61 @@ internal class AndroidGgwaveRuntime(
             record.release()
             throw GgwaveException("Microphone capture is unavailable. Grant RECORD_AUDIO and try again.")
         }
-        val job = scope.launch(start = CoroutineStart.LAZY) {
-            try {
-                val decodedDataArray = ShortArray(bufferSize / Short.SIZE_BYTES)
-                record.startRecording()
-                if (record.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
-                    throw GgwaveException("AudioRecord failed to start recording")
+        captureStream.start(scope, resource = record, onFailure = { listener.onCaptureFailed(it) }) {
+            val buffer = ShortArray(bufferSize / Short.SIZE_BYTES)
+            val decoder = CaptureDecoder(codecs, listener)
+            record.startRecording()
+            if (record.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                throw GgwaveException("AudioRecord failed to start recording")
+            }
+            while (isActive) {
+                val read = record.read(buffer, 0, buffer.size)
+                if (!isActive) break
+                if (read < 0) {
+                    throw GgwaveException("AudioRecord read failed: $read")
                 }
-                while (isActive) {
-                    val read = record.read(decodedDataArray, 0, decodedDataArray.size)
-                    if (!isActive) break
-                    if (read < 0) {
-                        throw GgwaveException("AudioRecord read failed: $read")
-                    }
-                    if (read == 0) continue
-                    val samples = if (read == decodedDataArray.size) {
-                        decodedDataArray
-                    } else {
-                        decodedDataArray.copyOf(read)
-                    }
-                    val payload = synchronized(decoderLock) {
-                        codecs.decoder.decode(samples)
-                    } ?: continue
-                    val text = payload.toGgwavePayload()
-                    if (text.isNotBlank()) {
-                        onReceivedMessage(text)
-                    }
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                if (isActive) {
-                    onCaptureFailed(error)
-                }
-            } finally {
-                val ownsRecord = synchronized(resourceLock) {
-                    if (audioRecord === record) {
-                        audioRecord = null
-                        true
-                    } else {
-                        false
-                    }
-                }
-                if (ownsRecord) {
-                    releaseAudioRecord(record)
-                }
-                synchronized(resourceLock) {
-                    if (captureJob === coroutineContext[Job]) {
-                        captureJob = null
-                    }
-                }
+                if (read == 0) continue
+                decoder.decode(if (read == buffer.size) buffer else buffer.copyOf(read))
             }
         }
-        synchronized(resourceLock) {
-            audioRecord = record
-            captureJob = job
-        }
-        job.start()
     }
 
     override fun stopCapturing() {
-        val (job, record) = synchronized(resourceLock) {
-            val resources = captureJob to audioRecord
-            captureJob = null
-            audioRecord = null
-            resources
-        }
-        job?.cancel()
-        releaseAudioRecord(record)
+        captureStream.stop()
     }
 
     override fun startPlayback(message: String) {
-        val encoded = try {
-            synchronized(encoderLock) {
-                codecs.encoder.encode(message.encodeToByteArray(), volume = config.volume)
+        stopPlayback()
+        playbackStream.start(scope, onFailure = { listener.onPlayFailed(it) }) {
+            val samples = codecs.encode(message, config.volume)
+            val track = createPlaybackTrack()
+            playbackStream.attach(track)
+            track.setVolume(AudioTrack.getMaxVolume())
+            track.play()
+            var offset = 0
+            while (isActive && offset < samples.size) {
+                val written = track.write(
+                    samples,
+                    offset,
+                    samples.size - offset,
+                    AudioTrack.WRITE_BLOCKING,
+                )
+                if (written <= 0) {
+                    throw GgwaveException("AudioTrack write failed: $written")
+                }
+                offset += written
             }
-        } catch (error: Throwable) {
-            onPlayFailed(error)
-            return
+            while (isActive && track.playState == AudioTrack.PLAYSTATE_PLAYING && track.playbackHeadPosition < samples.size) {
+                delay(20)
+            }
+            if (isActive) {
+                listener.onPlayEnded()
+            }
         }
-        if (encoded.isEmpty()) {
-            onPlayFailed(GgwaveException("Failed to encode message"))
-            return
-        }
-        play(encoded)
     }
 
     override fun stopPlayback() {
-        val (job, track) = synchronized(resourceLock) {
-            val resources = playbackJob to playbackTrack
-            playbackJob = null
-            playbackTrack = null
-            resources
-        }
-        job?.cancel()
-        releasePlaybackTrack(track)
-    }
-
-    private fun play(samples: ShortArray) {
-        stopPlayback()
-        val job = scope.launch(start = CoroutineStart.LAZY) {
-            var track: AudioTrack? = null
-            var trackRegistered = false
-            try {
-                val createdTrack = createPlaybackTrack()
-                track = createdTrack
-                coroutineContext.ensureActive()
-                synchronized(resourceLock) {
-                    playbackTrack = createdTrack
-                    trackRegistered = true
-                }
-                coroutineContext.ensureActive()
-                createdTrack.setVolume(AudioTrack.getMaxVolume())
-                createdTrack.play()
-                var offset = 0
-                while (isActive && offset < samples.size) {
-                    val written = createdTrack.write(
-                        samples,
-                        offset,
-                        samples.size - offset,
-                        AudioTrack.WRITE_BLOCKING,
-                    )
-                    if (written <= 0) {
-                        onPlayFailed(GgwaveException("AudioTrack write failed: $written"))
-                        return@launch
-                    }
-                    offset += written
-                }
-                while (isActive && createdTrack.playState == AudioTrack.PLAYSTATE_PLAYING && createdTrack.playbackHeadPosition < samples.size) {
-                    delay(20)
-                }
-                if (isActive) {
-                    onPlayEnded()
-                }
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Throwable) {
-                if (isActive) {
-                    onPlayFailed(error)
-                }
-            } finally {
-                val ownsTrack = synchronized(resourceLock) {
-                    if (playbackTrack === track) {
-                        playbackTrack = null
-                        true
-                    } else {
-                        false
-                    }
-                }
-                if (ownsTrack || !trackRegistered) {
-                    releasePlaybackTrack(track)
-                }
-                synchronized(resourceLock) {
-                    if (playbackJob === coroutineContext[Job]) {
-                        playbackJob = null
-                    }
-                }
-            }
-        }
-        synchronized(resourceLock) {
-            playbackJob = job
-        }
-        job.start()
+        playbackStream.stop()
     }
 
     private fun createPlaybackTrack(): AudioTrack {
@@ -262,8 +117,7 @@ internal class AndroidGgwaveRuntime(
         return track
     }
 
-    private fun releasePlaybackTrack(track: AudioTrack?) {
-        if (track == null) return
+    private fun releasePlaybackTrack(track: AudioTrack) {
         try {
             if (track.playState == AudioTrack.PLAYSTATE_PLAYING) {
                 track.pause()
@@ -273,21 +127,6 @@ internal class AndroidGgwaveRuntime(
         } catch (_: Exception) {
         }
         track.release()
-    }
-
-    override fun close() {
-        stopCapturing()
-        stopPlayback()
-        scope.cancel()
-        try {
-            synchronized(encoderLock) {
-                codecs.encoder.close()
-            }
-        } finally {
-            synchronized(decoderLock) {
-                codecs.decoder.close()
-            }
-        }
     }
 
     @SuppressLint("MissingPermission")
@@ -313,8 +152,7 @@ internal class AndroidGgwaveRuntime(
         return max(config.captureBufferSize, minBufferSize)
     }
 
-    private fun releaseAudioRecord(record: AudioRecord?) {
-        if (record == null) return
+    private fun releaseAudioRecord(record: AudioRecord) {
         try {
             if (record.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
                 record.stop()
