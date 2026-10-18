@@ -8,6 +8,10 @@
 
 ![screen_video_2024-11-16-21 52 58_720p](https://github.com/user-attachments/assets/efd5053a-4076-494d-aeea-7cbe3e5510c6)
 
+
+https://github.com/user-attachments/assets/adafe305-122d-4f5c-bad2-5d8f4545c7d1
+
+
 ## Overview
 
 ggwave-kmp sends and receives short messages through sound on Android, iOS and the JVM (Windows, macOS, Linux). It is a Kotlin Multiplatform wrapper around [ggwave](https://github.com/ggerganov/ggwave), a C++ library that encodes data as audio using an FSK-based protocol ([technical details](https://github.com/ggerganov/ggwave?tab=readme-ov-file#technical-details)).
