@@ -112,10 +112,13 @@ class GgwaveSession internal constructor(
         }
         playEnded?.cancel()
         playEnded = null
-        runtime.stopPlayback()
-        runtime.close()
-        if (ownsProcessSlot) {
-            SessionGuard.release()
+        try {
+            runtime.stopPlayback()
+            runtime.close()
+        } finally {
+            if (ownsProcessSlot) {
+                SessionGuard.release()
+            }
         }
     }
 

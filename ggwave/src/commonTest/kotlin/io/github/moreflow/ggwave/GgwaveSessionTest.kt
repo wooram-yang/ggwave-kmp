@@ -142,6 +142,19 @@ class GgwaveSessionTest {
     }
 
     @Test
+    fun closeReleasesProcessSlotWhenRuntimeCloseFails() {
+        assertTrue(SessionGuard.tryAcquire())
+        val session = GgwaveSession(FakeGgwaveRuntime(failClose = true), ownsProcessSlot = true)
+
+        assertFailsWith<GgwaveException> {
+            session.close()
+        }
+
+        assertTrue(SessionGuard.tryAcquire())
+        SessionGuard.release()
+    }
+
+    @Test
     fun sessionGuardAllowsOnlyOneAcquire() {
         assertTrue(SessionGuard.tryAcquire())
         try {
@@ -158,6 +171,7 @@ private class FakeGgwaveRuntime(
     private val failPlayback: Boolean = false,
     private val completePlaybackImmediately: Boolean = true,
     private val failCaptureOnStart: Boolean = false,
+    private val failClose: Boolean = false,
 ) : GgwaveRuntime {
     var capturing = false
     var lastMessage: String? = null
@@ -205,6 +219,9 @@ private class FakeGgwaveRuntime(
 
     override fun close() {
         closed = true
+        if (failClose) {
+            throw GgwaveException("close failed")
+        }
     }
 
     fun finishPlayback() {

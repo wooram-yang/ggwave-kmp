@@ -3,6 +3,7 @@ package com.example.ggwavekmp.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.moreflow.ggwave.GgwaveSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +32,7 @@ class ChatViewModel(
         }
         viewModelScope.launch {
             session.captureErrors.collect { error ->
-                _uiState.update { it.copy(captureError = error.message ?: "Microphone capture failed") }
+                _uiState.update { it.copy(errorMessage = error.message ?: "Microphone capture failed") }
             }
         }
         viewModelScope.launch {
@@ -65,12 +66,17 @@ class ChatViewModel(
                 messages = it.messages + outgoing,
                 inputText = "",
                 isSending = true,
+                errorMessage = null,
             )
         }
 
         viewModelScope.launch {
             try {
                 session.send(message)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _uiState.update { it.copy(errorMessage = error.message ?: "Failed to send message") }
             } finally {
                 _uiState.update { it.copy(isSending = false) }
             }
@@ -90,13 +96,13 @@ class ChatViewModel(
     }
 
     private fun startCapture() {
-        _uiState.update { it.copy(captureError = null) }
+        _uiState.update { it.copy(errorMessage = null) }
         try {
             session.startCapture()
             _uiState.update { it.copy(isCapturing = true) }
         } catch (error: Exception) {
             _uiState.update {
-                it.copy(isCapturing = false, captureError = error.message ?: "Microphone capture failed")
+                it.copy(isCapturing = false, errorMessage = error.message ?: "Microphone capture failed")
             }
         }
     }

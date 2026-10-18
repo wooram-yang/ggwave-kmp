@@ -79,7 +79,7 @@ fun ChatScreen(
                         modifier = Modifier.padding(horizontal = 20.dp),
                     )
                 }
-                uiState.captureError?.let { error ->
+                uiState.errorMessage?.let { error ->
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
