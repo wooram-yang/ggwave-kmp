@@ -1,6 +1,7 @@
 package io.github.moreflow.ggwave.internal
 
 import io.github.moreflow.ggwave.GgwaveConfig
+import io.github.moreflow.ggwave.GgwaveProtocol
 import java.lang.reflect.Proxy
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -33,7 +34,7 @@ class JvmGgwaveRuntimeTest {
         )
 
         try {
-            runtime.startPlayback("hello")
+            runtime.startPlayback("hello", GgwaveProtocol.AudibleFast)
 
             assertTrue(fakeClip.started.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
             assertFalse(fakeClip.closed.get())

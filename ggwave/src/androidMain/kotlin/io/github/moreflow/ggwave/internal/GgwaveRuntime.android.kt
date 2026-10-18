@@ -7,6 +7,7 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
 import io.github.moreflow.ggwave.GgwaveConfig
+import io.github.moreflow.ggwave.GgwaveProtocol
 import io.github.moreflow.ggwave.GgwaveException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -49,10 +50,10 @@ internal class AndroidGgwaveRuntime(
         captureStream.stop()
     }
 
-    override fun startPlayback(message: String) {
+    override fun startPlayback(message: String, protocol: GgwaveProtocol) {
         stopPlayback()
         playbackStream.start(scope, onFailure = { listener.onPlayFailed(it) }) {
-            val samples = codecs.encode(message, config.protocol, config.volume)
+            val samples = codecs.encode(message, protocol, config.volume)
             val track = createPlaybackTrack()
             playbackStream.attach(track)
             track.setVolume(AudioTrack.getMaxVolume())

@@ -69,6 +69,7 @@ session.close()
 ```
 
 - `send()` rethrows the error if encoding or playback fails, and throws `GgwaveException` if playback does not finish within 60 seconds. Calls are serialized, one message at a time.
+- `send(message, protocol)` overrides `GgwaveConfig.protocol` for one message, for example `GgwaveProtocol.UltrasoundFast` for an inaudible transfer.
 - `isCapturing`, `isPlaying` and `captureLevel` (input peak, 0 to 1) are `StateFlow`s for UI state.
 - Only one `GgwaveSession` can be active per process. `create()` throws until the previous session is closed.
 
@@ -79,7 +80,7 @@ session.close()
 | `sampleRate` | `48_000` | Capture and playback sample rate, 8,000 to 96,000 Hz. |
 | `captureBufferSize` | `4096` | Capture buffer size in bytes; must be a positive even number. |
 | `volume` | `50` | Playback volume passed to ggwave, 0 to 100. |
-| `protocol` | `AudibleFast` | Protocol used by `send()`. Receiving detects every protocol automatically. |
+| `protocol` | `AudibleFast` | Default protocol for `send()`. Receiving detects every protocol automatically. |
 
 ### Encoding and decoding only
 

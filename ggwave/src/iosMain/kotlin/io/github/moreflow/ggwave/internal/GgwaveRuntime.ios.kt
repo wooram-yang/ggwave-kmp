@@ -1,6 +1,7 @@
 package io.github.moreflow.ggwave.internal
 
 import io.github.moreflow.ggwave.GgwaveConfig
+import io.github.moreflow.ggwave.GgwaveProtocol
 import io.github.moreflow.ggwave.GgwaveException
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ByteVar
@@ -272,10 +273,10 @@ internal class IosGgwaveRuntime(
         queue
     }
 
-    override fun startPlayback(message: String) {
+    override fun startPlayback(message: String, protocol: GgwaveProtocol) {
         stopPlayback()
         playbackStream.start(scope, onFailure = { listener.onPlayFailed(it) }) {
-            val convertedAudioData = codecs.encode(message, config.protocol, config.volume).toLittleEndianByteArray()
+            val convertedAudioData = codecs.encode(message, protocol, config.volume).toLittleEndianByteArray()
             val completeAudioData = NSMutableData()
             completeAudioData.appendData(
                 createPcm16MonoWaveHeader(convertedAudioData.size, config.sampleRate).toNSData(),

@@ -54,7 +54,7 @@ class GgwaveSessionConcurrencyTest {
             activeCaptures.decrementAndGet()
         }
 
-        override fun startPlayback(message: String) {}
+        override fun startPlayback(message: String, protocol: GgwaveProtocol) {}
         override fun stopPlayback() {}
         override fun setListener(listener: GgwaveRuntime.Listener) {}
         override fun close() {}

@@ -1,6 +1,7 @@
 package io.github.moreflow.ggwave.internal
 
 import io.github.moreflow.ggwave.GgwaveConfig
+import io.github.moreflow.ggwave.GgwaveProtocol
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
@@ -44,10 +45,10 @@ internal class JvmGgwaveRuntime(
         captureStream.stop()
     }
 
-    override fun startPlayback(message: String) {
+    override fun startPlayback(message: String, protocol: GgwaveProtocol) {
         stopPlayback()
         playbackStream.start(scope, onFailure = { listener.onPlayFailed(it) }) {
-            val audioData = codecs.encode(message, config.protocol, config.volume).toLittleEndianByteArray()
+            val audioData = codecs.encode(message, protocol, config.volume).toLittleEndianByteArray()
             val clip = clipFactory()
             playbackStream.attach(clip)
             clip.open(audioFormat, audioData, 0, audioData.size)

@@ -62,6 +62,26 @@ class GgwaveSessionTest {
     }
 
     @Test
+    fun sendUsesConfiguredDefaultProtocol() = runTest {
+        val runtime = FakeGgwaveRuntime()
+        val session = GgwaveSession(runtime, defaultProtocol = GgwaveProtocol.UltrasoundNormal)
+
+        session.send("hello")
+
+        assertEquals(GgwaveProtocol.UltrasoundNormal, runtime.lastProtocol)
+    }
+
+    @Test
+    fun sendProtocolOverridesTheDefault() = runTest {
+        val runtime = FakeGgwaveRuntime()
+        val session = GgwaveSession(runtime, defaultProtocol = GgwaveProtocol.UltrasoundNormal)
+
+        session.send("hello", GgwaveProtocol.DualToneFastest)
+
+        assertEquals(GgwaveProtocol.DualToneFastest, runtime.lastProtocol)
+    }
+
+    @Test
     fun sendPreservesLeadingAndTrailingWhitespace() = runTest {
         val runtime = FakeGgwaveRuntime()
         val session = GgwaveSession(runtime)
@@ -205,6 +225,7 @@ private class FakeGgwaveRuntime(
 ) : GgwaveRuntime {
     var capturing = false
     var lastMessage: String? = null
+    var lastProtocol: GgwaveProtocol? = null
     var closed = false
     var closeCount = 0
     var playbackStopped = false
@@ -221,8 +242,9 @@ private class FakeGgwaveRuntime(
         capturing = false
     }
 
-    override fun startPlayback(message: String) {
+    override fun startPlayback(message: String, protocol: GgwaveProtocol) {
         lastMessage = message
+        lastProtocol = protocol
         if (failPlayback) {
             listener.onPlayFailed(GgwaveException("encode failed"))
         } else if (completePlaybackImmediately) {

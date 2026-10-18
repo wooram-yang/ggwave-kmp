@@ -24,6 +24,7 @@ import kotlinx.coroutines.withTimeout
 class GgwaveSession internal constructor(
     private val runtime: GgwaveRuntime,
     private val ownsProcessSlot: Boolean = false,
+    private val defaultProtocol: GgwaveProtocol = GgwaveCodec.DEFAULT_PROTOCOL,
 ) {
     private val sendMutex = Mutex()
     private val _receivedMessages = MutableSharedFlow<String>(extraBufferCapacity = 64)
@@ -102,7 +103,12 @@ class GgwaveSession internal constructor(
         _captureLevel.value = 0f
     }
 
-    suspend fun send(message: String) {
+    /**
+     * Plays [message] and suspends until playback finishes.
+     *
+     * [protocol] defaults to [GgwaveConfig.protocol]; receivers detect the protocol automatically.
+     */
+    suspend fun send(message: String, protocol: GgwaveProtocol = defaultProtocol) {
         checkActive()
         require(message.isNotBlank()) { "message must not be blank" }
 
@@ -113,7 +119,7 @@ class GgwaveSession internal constructor(
             try {
                 // Checked after publishing playEnded, so a concurrent close() either sees and cancels it or is seen here.
                 checkActive()
-                runtime.startPlayback(message)
+                runtime.startPlayback(message, protocol)
                 withTimeout(PLAYBACK_TIMEOUT_MS) {
                     done.await()
                 }
@@ -158,7 +164,7 @@ class GgwaveSession internal constructor(
                 )
             }
             return try {
-                GgwaveSession(createGgwaveRuntime(config), ownsProcessSlot = true)
+                GgwaveSession(createGgwaveRuntime(config), ownsProcessSlot = true, defaultProtocol = config.protocol)
             } catch (error: Throwable) {
                 SessionGuard.release()
                 throw error
