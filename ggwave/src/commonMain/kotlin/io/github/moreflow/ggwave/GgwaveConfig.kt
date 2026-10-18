@@ -4,6 +4,8 @@ data class GgwaveConfig(
     val sampleRate: Int = GgwaveCodecConfig.DEFAULT_SAMPLE_RATE,
     val captureBufferSize: Int = 4 * 1024,
     val volume: Int = GgwaveCodec.DEFAULT_VOLUME,
+    /** Protocol used by [GgwaveSession.send]. Receiving detects every protocol automatically. */
+    val protocol: GgwaveProtocol = GgwaveCodec.DEFAULT_PROTOCOL,
 ) {
     init {
         require(sampleRate in GgwaveCodecConfig.MIN_SAMPLE_RATE..GgwaveCodecConfig.MAX_SAMPLE_RATE) {

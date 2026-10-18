@@ -47,7 +47,7 @@ internal class JvmGgwaveRuntime(
     override fun startPlayback(message: String) {
         stopPlayback()
         playbackStream.start(scope, onFailure = { listener.onPlayFailed(it) }) {
-            val audioData = codecs.encode(message, config.volume).toLittleEndianByteArray()
+            val audioData = codecs.encode(message, config.protocol, config.volume).toLittleEndianByteArray()
             val clip = clipFactory()
             playbackStream.attach(clip)
             clip.open(audioFormat, audioData, 0, audioData.size)

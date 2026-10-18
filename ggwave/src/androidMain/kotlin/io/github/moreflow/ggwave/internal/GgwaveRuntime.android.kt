@@ -52,7 +52,7 @@ internal class AndroidGgwaveRuntime(
     override fun startPlayback(message: String) {
         stopPlayback()
         playbackStream.start(scope, onFailure = { listener.onPlayFailed(it) }) {
-            val samples = codecs.encode(message, config.volume)
+            val samples = codecs.encode(message, config.protocol, config.volume)
             val track = createPlaybackTrack()
             playbackStream.attach(track)
             track.setVolume(AudioTrack.getMaxVolume())

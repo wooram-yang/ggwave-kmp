@@ -275,7 +275,7 @@ internal class IosGgwaveRuntime(
     override fun startPlayback(message: String) {
         stopPlayback()
         playbackStream.start(scope, onFailure = { listener.onPlayFailed(it) }) {
-            val convertedAudioData = codecs.encode(message, config.volume).toLittleEndianByteArray()
+            val convertedAudioData = codecs.encode(message, config.protocol, config.volume).toLittleEndianByteArray()
             val completeAudioData = NSMutableData()
             completeAudioData.appendData(
                 createPcm16MonoWaveHeader(convertedAudioData.size, config.sampleRate).toNSData(),

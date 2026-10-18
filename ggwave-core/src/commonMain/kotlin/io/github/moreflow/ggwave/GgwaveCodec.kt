@@ -10,7 +10,7 @@ import io.github.moreflow.ggwave.internal.createGgwaveCodec
 interface GgwaveCodec : AutoCloseable {
     fun encode(
         payload: ByteArray,
-        protocol: GgwaveProtocol = GgwaveProtocol.AudibleFast,
+        protocol: GgwaveProtocol = DEFAULT_PROTOCOL,
         volume: Int = DEFAULT_VOLUME,
     ): ShortArray
 
@@ -19,6 +19,7 @@ interface GgwaveCodec : AutoCloseable {
     override fun close()
 
     companion object {
+        val DEFAULT_PROTOCOL = GgwaveProtocol.AudibleFast
         const val DEFAULT_VOLUME = 50
         const val MIN_VOLUME = 0
         const val MAX_VOLUME = 100
@@ -31,6 +32,6 @@ interface GgwaveCodec : AutoCloseable {
 
 fun GgwaveCodec.encodeText(
     text: String,
-    protocol: GgwaveProtocol = GgwaveProtocol.AudibleFast,
+    protocol: GgwaveProtocol = GgwaveCodec.DEFAULT_PROTOCOL,
     volume: Int = GgwaveCodec.DEFAULT_VOLUME,
 ): ShortArray = encode(text.encodeToByteArray(), protocol, volume)

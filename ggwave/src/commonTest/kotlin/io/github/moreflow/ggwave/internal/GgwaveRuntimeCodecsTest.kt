@@ -18,10 +18,11 @@ class GgwaveRuntimeCodecsTest {
         }
         val (encoder, decoder) = createdCodecs
 
-        codecs.encode("hi", volume = 30)
+        codecs.encode("hi", GgwaveProtocol.UltrasoundFast, volume = 30)
         val decoded = codecs.decode(ShortArray(4))
 
         assertEquals(listOf("hi"), encoder.encodedPayloads)
+        assertEquals(GgwaveProtocol.UltrasoundFast, encoder.lastProtocol)
         assertEquals(30, encoder.lastVolume)
         assertEquals(0, encoder.decodeCount)
         assertEquals(1, decoder.decodeCount)
@@ -63,10 +64,12 @@ internal class FakeCodec(
     var closed = false
     var decodeCount = 0
     var lastVolume: Int? = null
+    var lastProtocol: GgwaveProtocol? = null
     val encodedPayloads = mutableListOf<String>()
 
     override fun encode(payload: ByteArray, protocol: GgwaveProtocol, volume: Int): ShortArray {
         encodedPayloads += payload.decodeToString()
+        lastProtocol = protocol
         lastVolume = volume
         return ShortArray(1)
     }
