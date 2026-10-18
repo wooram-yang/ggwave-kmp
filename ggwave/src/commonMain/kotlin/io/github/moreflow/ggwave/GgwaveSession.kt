@@ -1,8 +1,13 @@
 package io.github.moreflow.ggwave
 
 import io.github.moreflow.ggwave.internal.GgwaveRuntime
+import io.github.moreflow.ggwave.internal.RuntimeLock
 import io.github.moreflow.ggwave.internal.SessionGuard
 import io.github.moreflow.ggwave.internal.createGgwaveRuntime
+import io.github.moreflow.ggwave.internal.withLock
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -15,6 +20,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
+@OptIn(ExperimentalAtomicApi::class)
 class GgwaveSession internal constructor(
     private val runtime: GgwaveRuntime,
     private val ownsProcessSlot: Boolean = false,
@@ -26,8 +32,12 @@ class GgwaveSession internal constructor(
     private val _isCapturing = MutableStateFlow(false)
     private val _isPlaying = MutableStateFlow(false)
 
+    // Runtime listener callbacks arrive on background threads, while the API is called from the app's threads.
+    private val captureLock = RuntimeLock()
+    private val closed = AtomicBoolean(false)
+
+    @Volatile
     private var playEnded: CompletableDeferred<Unit>? = null
-    private var closed = false
 
     val receivedMessages: SharedFlow<String> = _receivedMessages.asSharedFlow()
     val captureErrors: SharedFlow<Throwable> = _captureErrors.asSharedFlow()
@@ -66,18 +76,26 @@ class GgwaveSession internal constructor(
     }
 
     fun startCapture() {
-        checkActive()
-        if (_isCapturing.value) return
-        _isCapturing.value = true
-        try {
-            runtime.startCapturing()
-        } catch (error: Throwable) {
-            _isCapturing.value = false
-            throw error
+        captureLock.withLock {
+            checkActive()
+            if (_isCapturing.value) return
+            _isCapturing.value = true
+            try {
+                runtime.startCapturing()
+            } catch (error: Throwable) {
+                _isCapturing.value = false
+                throw error
+            }
         }
     }
 
     fun stopCapture() {
+        captureLock.withLock {
+            stopCaptureLocked()
+        }
+    }
+
+    private fun stopCaptureLocked() {
         if (!_isCapturing.value) return
         runtime.stopCapturing()
         _isCapturing.value = false
@@ -89,11 +107,12 @@ class GgwaveSession internal constructor(
         require(message.isNotBlank()) { "message must not be blank" }
 
         sendMutex.withLock {
-            checkActive()
             val done = CompletableDeferred<Unit>()
             playEnded = done
             _isPlaying.value = true
             try {
+                // Checked after publishing playEnded, so a concurrent close() either sees and cancels it or is seen here.
+                checkActive()
                 runtime.startPlayback(message)
                 withTimeout(PLAYBACK_TIMEOUT_MS) {
                     done.await()
@@ -109,12 +128,9 @@ class GgwaveSession internal constructor(
     }
 
     fun close() {
-        if (closed) return
-        closed = true
-        if (_isCapturing.value) {
-            runtime.stopCapturing()
-            _isCapturing.value = false
-            _captureLevel.value = 0f
+        if (!closed.compareAndSet(expectedValue = false, newValue = true)) return
+        captureLock.withLock {
+            stopCaptureLocked()
         }
         playEnded?.cancel()
         playEnded = null
@@ -129,7 +145,7 @@ class GgwaveSession internal constructor(
     }
 
     private fun checkActive() {
-        check(!closed) { "GgwaveSession is closed" }
+        check(!closed.load()) { "GgwaveSession is closed" }
     }
 
     companion object {

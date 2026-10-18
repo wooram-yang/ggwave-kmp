@@ -142,6 +142,36 @@ class GgwaveSessionTest {
     }
 
     @Test
+    fun closeTwiceClosesRuntimeOnce() {
+        val runtime = FakeGgwaveRuntime()
+        val session = GgwaveSession(runtime)
+        session.startCapture()
+
+        session.close()
+        session.close()
+
+        assertEquals(1, runtime.closeCount)
+        assertFalse(session.isCapturing.value)
+    }
+
+    @Test
+    fun queuedSendFailsImmediatelyWhenSessionCloses() = runTest {
+        val runtime = FakeGgwaveRuntime(completePlaybackImmediately = false)
+        val session = GgwaveSession(runtime)
+        val first = launch { session.send("first") }
+        runCurrent()
+        val second = async { runCatching { session.send("second") } }
+        runCurrent()
+
+        session.close()
+        first.join()
+        val result = second.await()
+
+        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        assertEquals("first", runtime.lastMessage)
+    }
+
+    @Test
     fun closeReleasesProcessSlotWhenRuntimeCloseFails() {
         assertTrue(SessionGuard.tryAcquire())
         val session = GgwaveSession(FakeGgwaveRuntime(failClose = true), ownsProcessSlot = true)
@@ -176,6 +206,7 @@ private class FakeGgwaveRuntime(
     var capturing = false
     var lastMessage: String? = null
     var closed = false
+    var closeCount = 0
     var playbackStopped = false
     private var listener: GgwaveRuntime.Listener = object : GgwaveRuntime.Listener {}
 
@@ -209,6 +240,7 @@ private class FakeGgwaveRuntime(
 
     override fun close() {
         closed = true
+        closeCount += 1
         if (failClose) {
             throw GgwaveException("close failed")
         }
