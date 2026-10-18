@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import ggwavekmp.sampleapp.generated.resources.Res
 import ggwavekmp.sampleapp.generated.resources.app_name
 import io.github.moreflow.ggwave.GgwaveProtocol
+import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +86,7 @@ fun ChatScreen(
             Column {
                 if (uiState.isCapturing) {
                     Text(
-                        text = "Listening · input ${(uiState.captureLevel * 100).toInt()}%",
+                        text = "Listening · input ${uiState.captureLevel.toPercentText()}",
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 20.dp),
                     )
@@ -198,6 +199,12 @@ private fun ProtocolSelector(
             }
         }
     }
+}
+
+/** One decimal place, so weak signals such as distant ultrasound don't read as 0%. */
+private fun Float.toPercentText(): String {
+    val tenths = (this * 1000).roundToInt()
+    return "${tenths / 10}.${tenths % 10}%"
 }
 
 private fun GgwaveProtocol.label(): String = when (this) {
