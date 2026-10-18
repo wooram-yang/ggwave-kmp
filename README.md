@@ -31,9 +31,9 @@ repositories {
 
 kotlin {
     sourceSets.commonMain.dependencies {
-        implementation("io.github.wooram-yang:ggwave-kmp:0.3.0")
+        implementation("io.github.wooram-yang:ggwave-kmp:0.4.0")
         // or, for encoding and decoding only:
-        // implementation("io.github.wooram-yang:ggwave-core:0.3.0")
+        // implementation("io.github.wooram-yang:ggwave-core:0.4.0")
     }
 }
 ```
@@ -79,6 +79,7 @@ session.close()
 | `sampleRate` | `48_000` | Capture and playback sample rate, 8,000 to 96,000 Hz. |
 | `captureBufferSize` | `4096` | Capture buffer size in bytes; must be a positive even number. |
 | `volume` | `50` | Playback volume passed to ggwave, 0 to 100. |
+| `protocol` | `AudibleFast` | Protocol used by `send()`. Receiving detects every protocol automatically. |
 
 ### Encoding and decoding only
 
