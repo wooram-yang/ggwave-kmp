@@ -6,7 +6,6 @@
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.wooram-yang/ggwave-kmp.svg)](https://central.sonatype.com/artifact/io.github.wooram-yang/ggwave-kmp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
 ![screen_video_2024-11-16-21 52 58_720p](https://github.com/user-attachments/assets/efd5053a-4076-494d-aeea-7cbe3e5510c6)
 
 ## Overview
@@ -49,6 +48,7 @@ import io.github.moreflow.ggwave.GgwaveSession
 
 val session = GgwaveSession.create()
 
+// `scope` is a CoroutineScope you own, for example viewModelScope.
 // Receive: collect first, then start the microphone.
 scope.launch {
     session.receivedMessages.collect { message -> println("received: $message") }
@@ -81,6 +81,16 @@ session.close()
 | `captureBufferSize` | `4096` | Capture buffer size in bytes; must be a positive even number. |
 | `volume` | `50` | Playback volume passed to ggwave, 0 to 100. |
 | `protocol` | `AudibleFast` | Default protocol for `send()`. Receiving detects every protocol automatically. |
+
+### Choosing a protocol
+
+| Family | Character |
+| --- | --- |
+| `Audible*` | Audible tones. The most reliable choice. |
+| `Ultrasound*` | Nearly inaudible, about 15 to 19.5 kHz. This is close to the limit of phone speakers, so reception varies with the device pair, distance and orientation. iPhone speakers in particular emit it weakly. |
+| `DualTone*` | Two tones played at once. |
+
+Each family comes in `Normal`, `Fast` and `Fastest`. Faster variants send sooner but are harder to pick up when the signal is weak.
 
 ### Encoding and decoding only
 
@@ -116,20 +126,11 @@ decoder.close()
 
 ## Sample app
 
-1. Press the receive button to listen through the microphone.
-<br/><br/> <img src="https://github.com/user-attachments/assets/aceee896-e837-4eab-abbb-e094c607d76f" width="370" /> <br/><br/>
+| 1. Press the receive button to listen | 2. Type a message on another device and send it | 3. The message appears on the receiver |
+| :---: | :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/aceee896-e837-4eab-abbb-e094c607d76f" width="200" /> | <img src="https://github.com/user-attachments/assets/146c5c0f-0c7e-4147-9e01-9ff72f5a8472" width="300" /> | <img src="https://github.com/user-attachments/assets/de14ad22-b6cf-449c-ad83-8c3956d96bdf" width="300" /> |
 
-2. On another device, type a message and press the send button.
-<br/><br/> <img src="https://github.com/user-attachments/assets/146c5c0f-0c7e-4147-9e01-9ff72f5a8472" width="800"/> <br/><br/>
-
-3. The message appears on the receiving device.
-<br/><br/> <img src="https://github.com/user-attachments/assets/de14ad22-b6cf-449c-ad83-8c3956d96bdf" width="800"/> <br/><br/>
-
-### Screenshots
-
-<img src="https://github.com/user-attachments/assets/6ccb66c3-8697-4b94-98e7-38c09a19d177" width="1000" /> <br/><br/>
-
-<video src="https://github.com/user-attachments/assets/f043ec36-d3e9-4e36-bf2e-2e1496815b59" width="1000" /> <br/><br/>
+Pick the send protocol from the dropdown above the input field.
 
 ## Building from source
 
