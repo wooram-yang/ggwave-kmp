@@ -1,9 +1,9 @@
 package io.github.moreflow.ggwave
 
 data class GgwaveConfig(
-    val sampleRate: Int = 48_000,
+    val sampleRate: Int = GgwaveCodecConfig.DEFAULT_SAMPLE_RATE,
     val captureBufferSize: Int = 4 * 1024,
-    val volume: Int = 50,
+    val volume: Int = GgwaveCodec.DEFAULT_VOLUME,
 ) {
     init {
         require(sampleRate in GgwaveCodecConfig.MIN_SAMPLE_RATE..GgwaveCodecConfig.MAX_SAMPLE_RATE) {
@@ -12,6 +12,8 @@ data class GgwaveConfig(
         require(captureBufferSize > 0 && captureBufferSize % 2 == 0) {
             "captureBufferSize must be a positive, even byte count"
         }
-        require(volume in 0..100) { "volume must be between 0 and 100" }
+        require(volume in GgwaveCodec.MIN_VOLUME..GgwaveCodec.MAX_VOLUME) {
+            "volume must be between ${GgwaveCodec.MIN_VOLUME} and ${GgwaveCodec.MAX_VOLUME}"
+        }
     }
 }

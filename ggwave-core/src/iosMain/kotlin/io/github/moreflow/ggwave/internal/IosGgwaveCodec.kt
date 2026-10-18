@@ -29,11 +29,7 @@ internal class IosGgwaveCodec(config: GgwaveCodecConfig) : GgwaveCodec {
     }
 
     override fun encode(payload: ByteArray, protocol: GgwaveProtocol, volume: Int): ShortArray {
-        require(payload.isNotEmpty()) { "payload must not be empty" }
-        require(payload.size <= GgwaveCodec.MAX_PAYLOAD_SIZE) {
-            "payload must not exceed ${GgwaveCodec.MAX_PAYLOAD_SIZE} bytes"
-        }
-        require(volume in 0..100) { "volume must be between 0 and 100" }
+        requireValidEncodeArguments(payload, volume)
         val handle = requireHandle()
         val nativeProtocol = protocol.toNativeProtocol()
         val byteCount = ggwave_encode(

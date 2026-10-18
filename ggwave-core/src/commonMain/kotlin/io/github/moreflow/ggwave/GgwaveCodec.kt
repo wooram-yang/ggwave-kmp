@@ -20,6 +20,8 @@ interface GgwaveCodec : AutoCloseable {
 
     companion object {
         const val DEFAULT_VOLUME = 50
+        const val MIN_VOLUME = 0
+        const val MAX_VOLUME = 100
         const val MAX_PAYLOAD_SIZE = 140
 
         fun create(config: GgwaveCodecConfig = GgwaveCodecConfig()): GgwaveCodec =

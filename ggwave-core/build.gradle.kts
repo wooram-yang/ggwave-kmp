@@ -3,6 +3,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.Sync
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import java.io.File
 import java.util.Properties
 
@@ -66,6 +67,16 @@ val jvmNativeLibraryName = when {
 kotlin {
     jvmToolchain(21)
     jvm()
+
+    // jvm and android share the JNI-backed codec in jniMain.
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jni") {
+                withJvm()
+                withCompilations { it.platformType == KotlinPlatformType.androidJvm }
+            }
+        }
+    }
 
     android {
         namespace = "io.github.moreflow.ggwave.core"
